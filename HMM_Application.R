@@ -53,7 +53,7 @@ mllk_long = function(theta.star, X, N){
     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
   }
-  # forward algorithm to calculate the log likelihood recursively
+  # forward algorithm to calculate the log-likelihood recursively
   foo = delta%*%diag(allprobs[1,])
   l = log(sum(foo))
   phi = foo / sum(foo)
@@ -88,7 +88,7 @@ mllk_short = function(theta.star, X, N){
     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
   }
-  # forward algorithm to calculate the log likelihood recursively
+  # forward algorithm to calculate the log-likelihood recursively
   -forward(delta, Gamma, allprobs)
 }
 
@@ -222,7 +222,7 @@ mllk_long_t = function(theta.star, X, N){
     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
   }
-  # forward algorithm to calculate the log likelihood recursively
+  # forward algorithm to calculate the log-likelihood recursively
   foo = delta%*%diag(allprobs[1,])
   l = log(sum(foo))
   phi = foo / sum(foo)
@@ -255,7 +255,7 @@ mllk_short_t = function(theta.star, X, N){
     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
   }
-  # forward algorithm to calculate the log likelihood recursively
+  # forward algorithm to calculate the log-likelihood recursively
   -forward_p(delta, Gamma, allprobs, X$timeOfDay2)
 }
 
