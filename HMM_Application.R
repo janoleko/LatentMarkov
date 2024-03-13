@@ -3,6 +3,11 @@
 
 elephant_data = read.csv("http://www.rolandlangrock.com/elephant_data.csv")
 
+# Originally, 15 elephants from the Etosha National Park where fitted with GPS 
+# collars to collect hourly movement data (@tsalyuk2019temporal). 
+# For simplicity, the raw data have already been preprocessed and we consider 
+# the track of only one individual.
+
 ## Defining time of day variable (could also be done with lubridate)
 elephant_data$timestamp = strptime(elephant_data$timestamp, 
                                    "%Y-%m-%d %H:%M:%S", tz = "GMT")
@@ -104,6 +109,9 @@ theta.star0 = c(log(stepMean0), log(stepSd0), # steppars
 # fitting the model by numerically optimising the log-likelihood with nlm
 mod_elephant1 = nlm(mllk_short, theta.star0, X = data, N = 3, 
                     print.level = 2, hessian = TRUE)
+# or slow
+# mod_elephant1 = nlm(mllk_long, theta.star0, X = data, N = 3, 
+#                     print.level = 2, hessian = TRUE)
 
 # obtaining the estimated parameters
 ## parameters for state-dependent distributions
@@ -279,7 +287,8 @@ for(t in 1:len){
   Gamma = tpm_p(tod = (todseq[t]+1:24) %% 24, beta = beta)
   Delta[t,] = stationary_p(Gamma, t = 1)
 }
-# Monte Carlo for confidence intervals
+
+# Obtaining confidence bands via Monte Carlo
 # drawing from the approximate normal distribution of the MLE
 thetas = mvtnorm::rmvnorm(1000, mean=mod_elephant2$estimate, 
                           sigma=solve(mod_elephant2$hessian))
