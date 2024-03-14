@@ -1,13 +1,17 @@
-library(fHMM)
+
+# Downloading data --------------------------------------------------------
+
+library(fHMM) # makes downloading financial data really easy
 
 # data = download_data("^GSPC")
 data = download_data("BTC-USD")
 data$return = c(NA, diff(log(data$Close)))
 
-hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white", breaks = 100)
+## EDA
+hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white", 
+     breaks = 100, main = "Histogram of returns", xlab = "returns")
 # heavier tails than a normal distribution
-
-plot(data$return, type = "l")
+plot(data$return, type = "l", ylab = "returns")
 
 # Likelihood functions ----------------------------------------------------
 
@@ -77,7 +81,7 @@ curve(dnorm(x, 0, 0.005), add = TRUE)
 curve(dnorm(x, 0, 0.05), add = TRUE)
 
 phi0 = 0.9
-sigma0 = 0.6
+sigma0 = 0.65
 beta0 = 0.02
 mu0 = 0.001
 qnorm(0.025, 0, sigma0/sqrt(1-phi0^2)) # 0.025 quantiale of stationary distribution
@@ -85,18 +89,18 @@ qnorm(0.025, 0, sigma0/sqrt(1-phi0^2)) # 0.025 quantiale of stationary distribut
 # working scale initial parameter vector
 theta.star0 = c(qlogis(phi0), log(sigma0), log(beta0), mu0)
 
-mod_BC1 = nlm(mllk_ssm_short, theta.star0, y = data$return, bm = 3.5, m = 300,
+mod_BC1 = nlm(mllk_ssm_short, theta.star0, y = data$return, bm = 3.5, m = 200,
                     print.level = 2, hessian = TRUE, stepmax = 10)
 
 # obtaining the estimated parameters
-(phi = plogis(mod_SP1$estimate[1]))
-(sigma = exp(mod_SP1$estimate[2]))
-(beta = exp(mod_SP1$estimate[3]))
-(mu = mod_SP1$estimate[4]) # expected return slightly positive
+(phi = plogis(mod_BC1$estimate[1]))
+(sigma = exp(mod_BC1$estimate[2]))
+(beta = exp(mod_BC1$estimate[3]))
+(mu = mod_BC1$estimate[4]) # expected return slightly positive
 qnorm(0.025, 0, sigma/sqrt(1-phi^2))
 
 ## state decoding
-bm = 3; m = 300
+bm = 3; m = 200
 # defining intervals and gridpoints for numerical integration
 b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
 h = b[2]-b[1] # interval width
@@ -114,7 +118,6 @@ mod_BC1$rawstates = viterbi(delta, Gamma, allprobs)
 mod_BC1$states = bstar[mod_BC1$rawstates]
 
 par(mfrow = c(1,1))
-a = beta*exp(mod_BC1$states/2)
 library(scales)
 plot(data$return, type = "l", bty = "n", ylab = "return")
 lines(2*beta*exp(mod_BC1$states/2)-0.45, type = "l", col = "orange")
