@@ -9,7 +9,7 @@ data = fev
 # how to deal with this properly?
 
 library(dplyr)
-data = data %>% filter(fev < 800)
+# data = data %>% filter(fev < 800)
  
 ## little EDA
 plot(data$days, data$fev, xlab = "time", ylab = "fav", bty = "n")
