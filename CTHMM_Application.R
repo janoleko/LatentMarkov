@@ -4,6 +4,10 @@ library(msm)
 data = fev
 
 # getting rid of the outliers at 1000
+
+# this is wrong: 999 signals death
+# how to deal with this properly?
+
 library(dplyr)
 data = data %>% filter(fev < 800)
  
@@ -162,3 +166,9 @@ for(j in 1:N) curve(delta[j]*dnorm(x, mu[j], sigma[j]), add = T, col = color[j],
 curve(delta[1]*dnorm(x, mu[1], sigma[1])+delta[2]*dnorm(x, mu[2], sigma[2])+
         delta[3]*dnorm(x, mu[3], sigma[3]),
       add = T, lwd = 2, lty = 2)
+
+
+
+# Adding covariate accute -------------------------------------------------
+
+
