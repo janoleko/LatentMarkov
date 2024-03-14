@@ -99,6 +99,9 @@ mod_BC1 = nlm(mllk_ssm_short, theta.star0, y = data$return, bm = 3.5, m = 200,
 (mu = mod_BC1$estimate[4]) # expected return slightly positive
 qnorm(0.025, 0, sigma/sqrt(1-phi^2))
 
+
+# Results -----------------------------------------------------------------
+
 ## state decoding
 bm = 3; m = 200
 # defining intervals and gridpoints for numerical integration
