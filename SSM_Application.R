@@ -131,26 +131,26 @@ lines(2*beta*exp(mod_BC1$states/2)-0.45, type = "l", col = "orange")
 
 library(expm)
 
-# calculating the last scaled forward variable
-lalpha = Lcpp:::logalpha(delta, 
-                array(Gamma, dim = c(m,m,nrow(allprobs)-1)), allprobs)
+# calculating the scaled forward variables
+# first unscaled, but on log scale
+lalpha = Lcpp:::logalpha(delta, array(Gamma, dim = c(m,m,nrow(allprobs)-1)), allprobs)
 
-t = nrow(data)
-lalphaT = lalpha[t-1,]
-ma = max(lalphaT)
-phiT = exp(lalphaT-ma)/sum(exp(lalphaT-ma))
+# function to evaluate the density of the forecast distribution
 
-
-dforecast = function(lalpha, t, Gamma, step = 1, x, mu, beta, bm=3.5){
+dforecast = function(x, lalpha, t, Gamma, step = 1, mu, beta, bm=3.5){
+  # calculating the scaled forward variable at time point of interest
   lalphaT = lalpha[t,]
   ma = max(lalphaT)
   phiT = exp(lalphaT-ma)/sum(exp(lalphaT-ma))
+  # details for numerical integration
   m = dim(Gamma)[1]
   b = seq(-bm, bm, length = m+1)
   h = b[2]-b[1] # interval width
   bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
+  # calculating state-dependent probs for all values in x
   allprobs = t(sapply(x, dnorm, mean = mu, sd = beta * exp(bstar/2)))
   out = rep(NA, length(x))
+  # forecast distribution
   for(i in 1:length(x)){
     out[i] = sum(phiT%*%(Gamma%^%step)%*%diag(allprobs[i,]))
   }
@@ -160,20 +160,25 @@ dforecast = function(lalpha, t, Gamma, step = 1, x, mu, beta, bm=3.5){
 xseq = seq(-0.25, 0.25, length=300)
 
 for(t in (nrow(data)-20) : (nrow(data)-1)){
-  pred = dforecast(lalpha, t=t, Gamma, x=xseq, mu=mu, beta=beta, bm=bm)
-  pred = pred/sum(pred)
+  pred = dforecast(xseq, lalpha, t=t, Gamma, mu=mu, beta=beta, bm=bm)
+  pred = pred/sum(pred) # we have to normalize
   plot(xseq, pred/h, type = "l", main = t, bty = "n", lwd = 2)
+  # deviding by h to plot the density
   abline(v=data$return[t+1])
+  # plotting the observed data point
   Sys.sleep(0.4)
 }
 
-alpha = 0.025
-pred = pred / sum(pred)
-smaller = which(cumsum(pred)<alpha)
-xseq[length(smaller)]
 
-plot(xseq, pred/h, type = "l", main = t, bty = "n", lwd = 2)
-abline(v = xseq[length(smaller)], col = "orange")
+## actually calculating VaR based on forecast distribution
+alpha = 0.025 # confidence level
+pred = dforecast(xseq, lalpha, t=nrow(data), Gamma, mu=mu, beta=beta, bm=bm)
+pred = pred / sum(pred)
+smaller = which(cumsum(pred)<alpha) # find the values that have smaller cum prob
+VaR = -xseq[smaller[length(smaller)]]
+
+plot(xseq, pred/h, type = "l", main = "Value at Risk", bty = "n", lwd = 2)
+abline(v = -VaR, col = "orange", lwd = 2)
 
 
 # long time forecast
