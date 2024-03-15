@@ -7,11 +7,17 @@ library(fHMM) # makes downloading financial data really easy
 data = download_data("BTC-USD")
 data$return = c(NA, diff(log(data$Close)))
 
+
 ## EDA
+plot(as.POSIXct(data$Date), data$Close, type = "l", 
+     bty = "n", xlab = "date", ylab ="close")
+
+plot(as.POSIXct(data$Date), data$return, type = "l", 
+     bty = "n", xlab = "date", ylab = "returns")
+
 hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white", 
      breaks = 100, main = "Histogram of returns", xlab = "returns")
 # heavier tails than a normal distribution
-plot(data$return, type = "l", ylab = "returns")
 
 # Likelihood functions ----------------------------------------------------
 
