@@ -121,7 +121,6 @@ mod_BC1$rawstates = viterbi(delta, Gamma, allprobs)
 mod_BC1$states = bstar[mod_BC1$rawstates]
 
 par(mfrow = c(1,1))
-library(scales)
 plot(data$return, type = "l", bty = "n", ylab = "return")
 lines(2*beta*exp(mod_BC1$states/2)-0.45, type = "l", col = "orange")
 
@@ -177,15 +176,7 @@ pred = pred / sum(pred)
 smaller = which(cumsum(pred)<alpha) # find the values that have smaller cum prob
 VaR = -xseq[smaller[length(smaller)]]
 
-plot(xseq, pred/h, type = "l", main = "Value at Risk", bty = "n", lwd = 2)
+plot(xseq, pred/h, type = "l", main = "Value at Risk", 
+     xlab = "return", ylab = "density",bty = "n", lwd = 2)
 abline(v = -VaR, col = "orange", lwd = 2)
 
-
-# long time forecast
-
-for(step in 1:20){
-  pred = dforecast(lalpha, t=nrow(data), Gamma, step = step, x=xseq, mu=mu, beta=beta, bm=bm)
-  pred = pred/sum(pred)
-  plot(xseq, pred/h, type = "l", main = t, bty = "n", lwd = 2)
-  Sys.sleep(0.2)
-}
