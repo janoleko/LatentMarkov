@@ -6,6 +6,7 @@ library(fHMM) # makes downloading financial data really easy
 # data = download_data("^GSPC")
 data = download_data("BTC-USD")
 data$return = c(NA, diff(log(data$Close)))
+data$Date[1]; data$Date[nrow(data)]
 
 
 ## EDA
@@ -126,11 +127,16 @@ allprobs[ind,] = t(sapply(data$return[ind], dnorm, mean = mu, sd = beta * exp(bs
 mod_BC1$rawstates = viterbi(delta, Gamma, allprobs)
 mod_BC1$states = bstar[mod_BC1$rawstates]
 
-par(mfrow = c(1,1))
-plot(data$return, type = "l", bty = "n", ylab = "return")
-lines(2*beta*exp(mod_BC1$states/2)-0.45, type = "l", col = "orange")
-
-
+pdf("./figs/ssm_decoded.pdf", width = 8, height = 4.5)
+par(mfrow = c(1,1), mar = c(5,4,4,4)+0.1)
+plot(as.POSIXct(data$Date), data$return, yaxt = "n", 
+     type = "l", bty = "n", ylab = "", ylim = c(-0.5, 0.2), xlab = "date")
+lines(as.POSIXct(data$Date), 2*beta*exp(mod_BC1$states/2)-0.45, type = "l", col = "orange")
+axis(2, at = seq(-0.2, 0.2, by = 0.1), labels = seq(-0.2, 0.2, by = 0.1))
+axis(4, at = seq(-0.5, -0.1, by = 0.1), labels = 0.5*(seq(-0.5, -0.1, by = 0.1)+0.45))
+mtext("volatility", side=4, line=3, at = -0.3)
+mtext("return", side=2, line=3, at = 0)
+dev.off()
 
 # Calculating VaR ---------------------------------------------------------
 
@@ -162,7 +168,8 @@ dforecast = function(x, lalpha, t, Gamma, step = 1, mu, beta, bm=3.5){
   out
 }
 
-xseq = seq(-0.25, 0.25, length=300)
+xseq = seq(-0.25, 0.25, length=400)
+h2 = 0.5/400
 
 for(t in (nrow(data)-20) : (nrow(data)-1)){
   pred = dforecast(xseq, lalpha, t=t, Gamma, mu=mu, beta=beta, bm=bm)
@@ -174,7 +181,6 @@ for(t in (nrow(data)-20) : (nrow(data)-1)){
   Sys.sleep(0.4)
 }
 
-
 ## actually calculating VaR based on forecast distribution
 alpha = 0.025 # confidence level
 pred = dforecast(xseq, lalpha, t=nrow(data), Gamma, mu=mu, beta=beta, bm=bm)
@@ -182,6 +188,15 @@ pred = pred / sum(pred)
 smaller = which(cumsum(pred)<alpha) # find the values that have smaller cum prob
 VaR = -xseq[smaller[length(smaller)]]
 
-plot(xseq, pred/h, type = "l", main = "Value at Risk", 
-     xlab = "return", ylab = "density",bty = "n", lwd = 2)
+library(scales)
+
+pdf("./figs/VaR.pdf", width = 7, height = 4)
+dens = pred/h2
+ind = 1:which.min((xseq+VaR)^2)
+plot(NA, main = paste("Value at Risk =",round(VaR,3)), xlim = c(-0.2,0.2), ylim = c(0, 15),
+     xlab = "return", ylab = "density", bty = "n")
+polygon(c(xseq[ind], rev(xseq[ind])), c(rep(0, length(ind)), rev(dens[ind])), 
+        col = alpha("orange",0.4), border = F)
+lines(xseq, dens, lwd = 2)
 abline(v = -VaR, col = "orange", lwd = 2)
+dev.off()

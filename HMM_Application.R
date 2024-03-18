@@ -130,9 +130,11 @@ round(Gamma, 3)
 color = c("orange", "deepskyblue", "seagreen2") # color vector
 
 # histogram and the marginal distribution
+pdf("./figs/hmm_elephant.pdf", width = 8, height = 3)
+par(mfrow = c(1,3))
 ## step length
 hist(data$step, prob = TRUE, border = "white", xlim = c(0,4), breaks = 50,
-     main = "Histogram of step length", xlab = "step length")
+     main = "", xlab = "step length", ylab = "density", cex = 0.9)
 shape = mu^2/sigma^2; scale = sigma^2/mu
 # component distributions
 for(j in 1:N){
@@ -148,7 +150,7 @@ legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n"
 
 ## turning angle
 hist(data$angle, prob = TRUE, border = "white", 
-     main = "Histogram of turning angle", xlab = "turning angle")
+     main = "", xlab = "turning angle", ylab = "density", cex = 0.9)
 # component distributions
 for(j in 1:N){
   curve(delta[j]*CircStats::dvm(x, mu.turn[j], kappa[j]), 
@@ -160,6 +162,7 @@ curve(delta[1]*CircStats::dvm(x, mu.turn[1], kappa[1])+
         delta[3]*CircStats::dvm(x, mu.turn[3], kappa[3]), 
       add = T, lty = 2, lwd = 2, n = 300)
 legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
+dev.off()
 
 
 # state decoding
@@ -308,6 +311,8 @@ for(j in 1:N){
   }
 }
 
+# pdf("./figs/hmm_timeOfDay.pdf", width = 6, height = 4)
+# par(mfrow = c(1,1))
 plot(NA, xlim = c(0,24), ylim = c(0,1), bty = "n", xaxt = "n",
      xlab = "time of day", ylab = "state occupancy probabilities")
 axis(1, at = seq(0,24,by=4), labels = seq(0,24,by=4))
@@ -316,3 +321,6 @@ for(j in 1:N){
   lines(todseq, Delta[,j], lwd = 2, col = color[j]) 
 }
 legend("top", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
+dev.off()
+
+

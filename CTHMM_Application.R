@@ -1,6 +1,7 @@
 # Data --------------------------------------------------------------------
 
 library(msm)
+library(Lcpp)
 data = fev
 
  
@@ -103,12 +104,16 @@ I_fev5 = solve(mod_fev5$hessian)
 
 theta.star = mod_fev5$estimate
 beta = matrix(theta.star[1:4], ncol = 2)
+colnames(beta) = c("intercept", "accute inf.")
+rownames(beta) = c("healthy state", "sick state")
+sqrt(diag(I_fev5))[1:4]
 sigma = exp(theta.star[4+1:2])
 # structured generator matrix
 Q = matrix(0, 3, 3)
 Q[1,2:3] = exp(theta.star[6+1:2])
 Q[2,3] = exp(theta.star[9])
 diag(Q) = -rowSums(Q)
+rownames(Q) = colnames(Q) = c("healthy", "sick", "dead")
 # average number of years it takes to get to next diseasse stage/ death:
 round((1/Q)/365,2)
 
@@ -143,8 +148,10 @@ for(i in ptnums){
 # probabilty of being in the diseased state is much higher after infection
 
 
+color = c("orange", "deepskyblue")
+pdf("./figs/cthmm_marginal.pdf", width = 8, height = 4)
 # pseudo marginal distribution without and with accute infection in the last 14 days
-par(mfrow = c(2,1))
+par(mfrow = c(1,2))
 hist(data$fev[which(data$acute==0)], prob = T, border = "white", ylab = "density",
      main = "accute = 0", xlab = "fev", breaks = 150, ylim = c(0,0.02), xlim = c(0,150))
 for(j in 1:2) curve(delta0[j]*dnorm(x, beta[j,1], sigma[j]), add = T, col = color[j], lwd = 2)
@@ -156,3 +163,5 @@ hist(data$fev[which(data$acute==1)], prob = T, border = "white",  ylab = "densit
 for(j in 1:2) curve(delta1[j]*dnorm(x, beta[j,1]+beta[j,2], sigma[j]), add = T, col = color[j], lwd = 2)
 curve(delta1[1]*dnorm(x, beta[1,1]+beta[1,2], sigma[1])+delta1[2]*dnorm(x, beta[2,1]+beta[2,2], sigma[2]),
       add = T, lwd = 2, lty = 2)
+legend("topright", lwd = 2, col = color, legend = paste("state", 1:2), bty = "n") 
+dev.off()
