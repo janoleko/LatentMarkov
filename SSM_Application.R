@@ -185,4 +185,3 @@ VaR = -xseq[smaller[length(smaller)]]
 plot(xseq, pred/h, type = "l", main = "Value at Risk", 
      xlab = "return", ylab = "density",bty = "n", lwd = 2)
 abline(v = -VaR, col = "orange", lwd = 2)
-
