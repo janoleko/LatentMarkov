@@ -1,7 +1,7 @@
 # Data --------------------------------------------------------------------
 
 library(msm)
-library(Lcpp)
+library(LaMa)
 data = fev
 
  
@@ -32,7 +32,7 @@ mllk_ct_short = function(theta.star, X){
     X_p = X[which(X$ptnum==i),]
     n_p = nrow(X_p)
     timediff = diff(X_p$days)
-    Qube = Lcpp::tpm_cont(Q, timediff) # exp(Q*dt)
+    Qube = LaMa::tpm_cont(Q, timediff) # exp(Q*dt)
     allprobs = matrix(1, nrow = n_p, ncol = 3)
     ind = which(!is.na(X_p$fev))
     for(j in 1:2){
@@ -41,7 +41,7 @@ mllk_ct_short = function(theta.star, X){
     allprobs[,3] = 0
     allprobs[which(X_p$fev==999),] = c(0,0,1)
     # forward algorithm to calculate the log-likelihood recursively
-    l = l + Lcpp::forward_g(delta, Qube, allprobs)
+    l = l + LaMa::forward_g(delta, Qube, allprobs)
   }
   return(-l)
 }
@@ -128,7 +128,7 @@ for(i in ptnums){
   X_p = data[which(data$ptnum==i),]
   n_p = nrow(X_p)
   timediff = diff(X_p$days)
-  Qube = Lcpp::tpm_cont(Q, timediff) # exp(Q*dt)
+  Qube = LaMa::tpm_cont(Q, timediff) # exp(Q*dt)
   allprobs = matrix(1, nrow = n_p, ncol = 3)
   ind = which(!is.na(X_p$fev))
   for(j in 1:2){

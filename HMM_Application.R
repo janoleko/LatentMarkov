@@ -65,8 +65,8 @@ mllk_long = function(theta.star, X, N){
   return(-l)
 }
 
-### short version using the package Lcpp
-library(Lcpp)
+### short version using the package LaMa
+library(LaMa)
 
 # with the building-block functions from the R package Lcpp, we can write the 
 # negative log-likelihood function much shorter and make it fuch faster (by a factor of 10-20).
@@ -237,7 +237,7 @@ mllk_long_t = function(theta.star, X, N){
   return(-l)
 }
 
-### short version using the package Lcpp
+### short version using the package LaMa
 mllk_short_t = function(theta.star, X, N){
   # transforming working parameters to natural
   ## parameters for state-dependent distributions
@@ -321,6 +321,64 @@ for(j in 1:N){
   lines(todseq, Delta[,j], lwd = 2, col = color[j]) 
 }
 legend("top", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
+dev.off()
+
+
+
+# Full Figure -------------------------------------------------------------
+
+pdf("./figs/hmm_elephant.pdf", width = 8, height = 3)
+
+m = matrix(c(1,1,1,2,3,4), nrow = 2, ncol = 3, byrow = TRUE)
+layout(mat = m, heights = c(0.13, 1, 1))
+par(mar = c(0,2,1,1))
+plot(1, type = "n", axes=FALSE, xlab="", ylab="")
+legend("top", inset = 0, col = color, 
+       legend = c("resting", "foraging/ searching", "travelling"), lwd = 2,
+       horiz = T, bty = "n", text.width = c(0, 0.15, 0))
+
+par(mar = c(5.5,4,2,1), xpd = F)
+
+
+# par(mfrow = c(1,3))
+## step length
+hist(data$step, prob = TRUE, border = "white", xlim = c(0,4), breaks = 50,
+     main = "", xlab = "step length", ylab = "density", cex = 0.9)
+shape = mu^2/sigma^2; scale = sigma^2/mu
+# component distributions
+for(j in 1:N){
+  curve(delta[j]*dgamma(x, shape=shape[j], scale=scale[j]), 
+        add = T, col = color[j], lwd = 2, n = 300)
+}
+# marginal as sum
+curve(delta[1]*dgamma(x, shape=shape[1], scale=scale[1])+
+        delta[2]*dgamma(x, shape=shape[2], scale=scale[2])+
+        delta[3]*dgamma(x, shape=shape[3], scale=scale[3]), 
+      add = T, lty = 2, lwd = 2, n = 300)
+# legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
+
+## turning angle
+hist(data$angle, prob = TRUE, border = "white", 
+     main = "", xlab = "turning angle", ylab = "density", cex = 0.9)
+# component distributions
+for(j in 1:N){
+  curve(delta[j]*CircStats::dvm(x, mu.turn[j], kappa[j]), 
+        add = T, col = color[j], lwd = 2, n = 300)
+}
+# marginal as sum
+curve(delta[1]*CircStats::dvm(x, mu.turn[1], kappa[1])+
+        delta[2]*CircStats::dvm(x, mu.turn[2], kappa[2])+
+        delta[3]*CircStats::dvm(x, mu.turn[3], kappa[3]), 
+      add = T, lty = 2, lwd = 2, n = 300)
+# legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
+plot(NA, xlim = c(0,24), ylim = c(0,1), bty = "n", xaxt = "n",
+     xlab = "time of day", ylab = "state occupancy probabilities")
+axis(1, at = seq(0,24,by=4), labels = seq(0,24,by=4))
+for(j in 1:N){ 
+  polygon(c(todseq, rev(todseq)), c(DeltaCI[,j,1], rev(DeltaCI[,j,2])), col = alpha(color[j], 0.2), border = F)
+  lines(todseq, Delta[,j], lwd = 2, col = color[j]) 
+}
+# legend("top", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
 dev.off()
 
 

@@ -52,9 +52,9 @@ mllk_ssm_long = function(theta.star, y, bm, m){
   return(-l)
 }
 
-### short version using the package Lcpp
-library(Lcpp)
-# with the building-block functions from the R package Lcpp, we can write the 
+### short version using the package LaMa
+library(LaMa)
+# with the building-block functions from the R package LaMa, we can write the 
 # negative log-likelihood function much shorter and make it fuch faster (by a factor of 10-20).
 mllk_ssm_short = function(theta.star, y, bm, m){
   # transforming parameters to natural
@@ -106,6 +106,21 @@ mod_BC1 = nlm(mllk_ssm_short, theta.star0, y = data$return, bm = 3.5, m = 200,
 (mu = mod_BC1$estimate[4]) # expected return slightly positive
 qnorm(0.025, 0, sigma/sqrt(1-phi^2))
 
+I = solve(mod_BC1$hessian)
+# standard deviations with delta method
+sd_phi = sqrt(I[1,1]*(
+  exp(mod_BC1$estimate[1])/
+    (1+exp(mod_BC1$estimate[1]))^2
+  )^2)
+sd_sigma = sqrt(I[2,2]*exp(mod_BC1$estimate[2])^2)
+sd_beta = sqrt(I[3,3]*exp(mod_BC1$estimate[3])^2)
+sd_mu = I[4,4]
+
+round(sd_phi, 3)
+round(sd_sigma, 3)
+round(sd_beta, 3)
+round(sd_mu, 4)
+
 
 # Results -----------------------------------------------------------------
 
@@ -144,7 +159,7 @@ library(expm)
 
 # calculating the scaled forward variables
 # first unscaled, but on log scale
-lalpha = Lcpp:::logalpha(delta, array(Gamma, dim = c(m,m,nrow(allprobs)-1)), allprobs)
+lalpha = LaMa:::logalpha(delta, array(Gamma, dim = c(m,m,nrow(allprobs)-1)), allprobs)
 
 # function to evaluate the density of the forecast distribution
 
