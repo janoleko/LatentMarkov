@@ -154,6 +154,7 @@ se = sqrt(diag(I))
 (betaCI = mod$estimate[3] + 1.96 * se[3]*c(-1,1))
 (probCI = plogis(mod$estimate[3] + 1.96 * se[3]*c(-1,1)))
 
+# estimated parameters and confidence intervals
 round(theta, 3)
 round(thetaCI, 3)
 
@@ -167,8 +168,11 @@ round(plogis(beta), 4)
 
 
 # ACF deduced from OU process
-exp(-0.11 * 5) # 92 % autocorrelation after one minute
-exp(-theta * 60) # 35 % autocorrelation after 60 minutes (entire game)
+exp(-theta * 5) # 92% autocorrelation after one minute
+exp(-theta * 60) # 35% autocorrelation after 60 minutes (entire game)
+
+# plugging in lower CI
+exp(-0.11 * 5) # 58%
 
 
 # sampling from fitted OU process
