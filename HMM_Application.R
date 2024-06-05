@@ -1,5 +1,10 @@
 
-# Data --------------------------------------------------------------------
+# Loading packages --------------------------------------------------------
+
+# install.packages("LaMa")
+library(LaMa)
+
+# Loading the data --------------------------------------------------------
 
 elephant_data = read.csv("http://www.rolandlangrock.com/elephant_data.csv")
 
@@ -7,6 +12,9 @@ elephant_data = read.csv("http://www.rolandlangrock.com/elephant_data.csv")
 # collars to collect hourly movement data (@tsalyuk2019temporal). 
 # For simplicity, the raw data have already been preprocessed and we consider 
 # the track of only one individual.
+
+
+# Some preprocessing ------------------------------------------------------
 
 ## Defining time of day variable (could also be done with lubridate)
 elephant_data$timestamp = strptime(elephant_data$timestamp, 
@@ -28,12 +36,12 @@ sum(na.omit(data$step) == 0)
 data$step[which(data$step == 0)] = 1e-5
 
 
-# Likelihood functions ----------------------------------------------------
+# Defining the negative log-likelihood function ---------------------------
 
 ## homogeneous HMM
 
 ### long version
-mllk_long = function(theta.star, X, N){
+mllk_slow = function(theta.star, X, N){
   # transforming working parameters to natural
   ## parameters for state-dependent distributions
   mu = exp(theta.star[1:N])
@@ -70,7 +78,7 @@ library(LaMa)
 
 # with the building-block functions from the R package Lcpp, we can write the 
 # negative log-likelihood function much shorter and make it fuch faster (by a factor of 10-20).
-mllk_short = function(theta.star, X, N){
+mllk_fast = function(theta.star, X, N){
   # transforming working parameters to natural
   ## parameters for state-dependent distributions
   mu = exp(theta.star[1:N])
@@ -78,9 +86,9 @@ mllk_short = function(theta.star, X, N){
   mu.turn = theta.star[2*N+1:N]
   kappa = exp(theta.star[3*N+1:N])
   ## transition probability matrix
-  Gamma = tpm(theta.star[4*N+1:(N*(N-1))])
+  Gamma = LaMa::tpm(theta.star[4*N+1:(N*(N-1))])
   ## initial distribution -> stationary
-  delta = stationary(Gamma)
+  delta = LaMa::stationary(Gamma)
   # allprobs matrix of state-dependent densities
   allprobs = matrix(1, nrow(X), N)
   ind = which(!is.na(X$step) & !is.na(X$angle))
@@ -89,7 +97,7 @@ mllk_short = function(theta.star, X, N){
       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
   }
   # forward algorithm to calculate the log-likelihood recursively
-  -forward(delta, Gamma, allprobs)
+  -LaMa::forward(delta, Gamma, allprobs)
 }
 
 
@@ -107,10 +115,10 @@ theta.star0 = c(log(stepMean0), log(stepSd0), # steppars
                 rep(-2, 6)) # tpmpars
 
 # fitting the model by numerically optimising the log-likelihood with nlm
-mod_elephant1 = nlm(mllk_short, theta.star0, X = data, N = 3, 
+mod_elephant1 = nlm(mllk_fast, theta.star0, X = data, N = 3, 
                     print.level = 2, hessian = TRUE)
 # or slow
-# mod_elephant1 = nlm(mllk_long, theta.star0, X = data, N = 3, 
+# mod_elephant1 = nlm(mllk_slow, theta.star0, X = data, N = 3, 
 #                     print.level = 2, hessian = TRUE)
 
 # obtaining the estimated parameters
@@ -130,8 +138,7 @@ round(Gamma, 3)
 color = c("orange", "deepskyblue", "seagreen2") # color vector
 
 # histogram and the marginal distribution
-pdf("./figs/hmm_elephant.pdf", width = 8, height = 3)
-par(mfrow = c(1,3))
+par(mfrow = c(1,2))
 ## step length
 hist(data$step, prob = TRUE, border = "white", xlim = c(0,4), breaks = 50,
      main = "", xlab = "step length", ylab = "density", cex = 0.9)
@@ -162,7 +169,6 @@ curve(delta[1]*CircStats::dvm(x, mu.turn[1], kappa[1])+
         delta[3]*CircStats::dvm(x, mu.turn[3], kappa[3]), 
       add = T, lty = 2, lwd = 2, n = 300)
 legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
-dev.off()
 
 
 # state decoding
@@ -177,9 +183,11 @@ for(j in 1:N){
 mod_elephant1$states = viterbi(delta, Gamma, allprobs)
 
 library(scales) # for color transparency
+par(mfrow = c(1,1))
 plot(data$x, data$y, type = "l", xlab = "x", ylab = "y")
 points(data$x, data$y, pch = 20, col = alpha(color[mod_elephant1$states], 0.4))
 
+par(mfrow = c(1,1))
 plot(data$timestamp, data$step, col = color[mod_elephant1$states], bty = "n", 
      ylab = "step length", xlab = "time")
 plot(data$timestamp, data$angle, col = color[mod_elephant1$states], bty = "n", 
@@ -194,7 +202,7 @@ plot(data$timestamp, data$angle, col = color[mod_elephant1$states], bty = "n",
 # likelihood functions
 
 ### long version
-mllk_long_t = function(theta.star, X, N){
+mllk_HMM_slow = function(theta.star, X, N){
   # transforming working parameters to natural
   ## parameters for state-dependent distributions
   mu = exp(theta.star[1:N])
@@ -238,7 +246,7 @@ mllk_long_t = function(theta.star, X, N){
 }
 
 ### short version using the package LaMa
-mllk_short_t = function(theta.star, X, N){
+mllk_HMM_fast = function(theta.star, X, N){
   # transforming working parameters to natural
   ## parameters for state-dependent distributions
   mu = exp(theta.star[1:N])
@@ -275,7 +283,7 @@ theta.star0 = c(log(stepMean0), log(stepSd0), # steppars
                 rep(-2, 6), runif(6*2,-0.1,0.1)) # tpmpars
 
 # fitting the model by numerically optimising the log-likelihood with nlm
-mod_elephant2 = nlm(mllk_short_t, theta.star0, X = data, N = 3, 
+mod_elephant2 = nlm(mllk_HMM_fast, theta.star0, X = data, N = 3, 
                     print.level = 2, iterlim = 1000, hessian = TRUE)
 
 # getting state process parameters
@@ -311,19 +319,6 @@ for(j in 1:N){
   }
 }
 
-# pdf("./figs/hmm_timeOfDay.pdf", width = 6, height = 4)
-# par(mfrow = c(1,1))
-plot(NA, xlim = c(0,24), ylim = c(0,1), bty = "n", xaxt = "n",
-     xlab = "time of day", ylab = "state occupancy probabilities")
-axis(1, at = seq(0,24,by=4), labels = seq(0,24,by=4))
-for(j in 1:N){ 
-  polygon(c(todseq, rev(todseq)), c(DeltaCI[,j,1], rev(DeltaCI[,j,2])), col = alpha(color[j], 0.2), border = F)
-  lines(todseq, Delta[,j], lwd = 2, col = color[j]) 
-}
-legend("top", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
-dev.off()
-
-
 
 # Full Figure -------------------------------------------------------------
 
@@ -339,8 +334,7 @@ legend("top", inset = 0, col = color,
 
 par(mar = c(5.5,4,2,1), xpd = F)
 
-
-# par(mfrow = c(1,3))
+# histogram and the marginal distribution
 ## step length
 hist(data$step, prob = TRUE, border = "white", xlim = c(0,4), breaks = 50,
      main = "", xlab = "step length", ylab = "density", cex = 0.9)
@@ -355,7 +349,6 @@ curve(delta[1]*dgamma(x, shape=shape[1], scale=scale[1])+
         delta[2]*dgamma(x, shape=shape[2], scale=scale[2])+
         delta[3]*dgamma(x, shape=shape[3], scale=scale[3]), 
       add = T, lty = 2, lwd = 2, n = 300)
-# legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
 
 ## turning angle
 hist(data$angle, prob = TRUE, border = "white", 
@@ -370,7 +363,8 @@ curve(delta[1]*CircStats::dvm(x, mu.turn[1], kappa[1])+
         delta[2]*CircStats::dvm(x, mu.turn[2], kappa[2])+
         delta[3]*CircStats::dvm(x, mu.turn[3], kappa[3]), 
       add = T, lty = 2, lwd = 2, n = 300)
-# legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
+
+# periodically stationary distribution
 plot(NA, xlim = c(0,24), ylim = c(0,1), bty = "n", xaxt = "n",
      xlab = "time of day", ylab = "state occupancy probabilities")
 axis(1, at = seq(0,24,by=4), labels = seq(0,24,by=4))
@@ -378,7 +372,6 @@ for(j in 1:N){
   polygon(c(todseq, rev(todseq)), c(DeltaCI[,j,1], rev(DeltaCI[,j,2])), col = alpha(color[j], 0.2), border = F)
   lines(todseq, Delta[,j], lwd = 2, col = color[j]) 
 }
-# legend("top", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n")
 dev.off()
 
 
