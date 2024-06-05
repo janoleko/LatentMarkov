@@ -6,6 +6,15 @@ data = fev
 
  
 ## little EDA
+nrow(fev)
+# 5896 observations
+colnames(fev)
+length(unique(fev$ptnum))
+# 203 patients
+datalist = split(fev, fev$ptnum)
+sum(sapply(datalist, function(X) sum(X$fev == 999)))
+# 96 patients died
+
 plot(data$days, data$fev, xlab = "time", ylab = "fav", bty = "n", pch = 20)
 hist(data$fev, prob = T, border = "white", main = "Histogram of fev", xlab = "fev")
 
@@ -104,6 +113,12 @@ I_fev5 = solve(mod_fev5$hessian)
 
 theta.star = mod_fev5$estimate
 beta = matrix(theta.star[1:4], ncol = 2)
+
+beta1CI = cbind(beta[,2] - 1.96 * sqrt(diag(I_fev5)[3:4]),
+                beta[,2] + 1.96 * sqrt(diag(I_fev5)[3:4]))
+
+round(beta1CI, 3)
+
 colnames(beta) = c("intercept", "accute inf.")
 rownames(beta) = c("healthy state", "sick state")
 sqrt(diag(I_fev5))[1:4]
@@ -165,3 +180,5 @@ curve(delta1[1]*dnorm(x, beta[1,1]+beta[1,2], sigma[1])+delta1[2]*dnorm(x, beta[
       add = T, lwd = 2, lty = 2)
 legend("topright", lwd = 2, col = color, legend = paste("state", 1:2), bty = "n") 
 dev.off()
+
+
