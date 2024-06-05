@@ -1,15 +1,23 @@
 
+# Loading packages --------------------------------------------------------
+
+# install.packages("fHMM")
+library(fHMM) # makes downloading financial data really easy
+# install.packages("LaMa")
+library(LaMa)
+# install.packages("expm")
+library(expm)
+
+
 # Downloading data --------------------------------------------------------
 
-library(fHMM) # makes downloading financial data really easy
-
-# data = download_data("^GSPC")
 data = download_data("BTC-USD")
 data$return = c(NA, diff(log(data$Close)))
 data$Date[1]; data$Date[nrow(data)]
 
 
-## EDA
+# Some EDA ----------------------------------------------------------------
+
 plot(as.POSIXct(data$Date), data$Close, type = "l", 
      bty = "n", xlab = "date", ylab ="close")
 
@@ -18,12 +26,13 @@ plot(as.POSIXct(data$Date), data$return, type = "l",
 
 hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white", 
      breaks = 100, main = "Histogram of returns", xlab = "returns")
-# heavier tails than a normal distribution
+# heavier tails than a normal distribution -> stochastic volatility
 
-# Likelihood functions ----------------------------------------------------
+
+# Defining the negative log-likelihood function ---------------------------
 
 ### long version
-mllk_ssm_long = function(theta.star, y, bm, m){
+mllk_ssm_slow = function(theta.star, y, bm, m){
   # transforming parameters to natural
   phi = plogis(theta.star[1])
   sigma = exp(theta.star[2])
@@ -53,10 +62,7 @@ mllk_ssm_long = function(theta.star, y, bm, m){
 }
 
 ### short version using the package LaMa
-library(LaMa)
-# with the building-block functions from the R package LaMa, we can write the 
-# negative log-likelihood function much shorter and make it fuch faster (by a factor of 10-20).
-mllk_ssm_short = function(theta.star, y, bm, m){
+mllk_ssm_fast = function(theta.star, y, bm, m){
   # transforming parameters to natural
   phi = plogis(theta.star[1])
   sigma = exp(theta.star[2])
@@ -81,7 +87,7 @@ mllk_ssm_short = function(theta.star, y, bm, m){
 
 # Model fitting -----------------------------------------------------------
 
-# initial parameters for numerical optimisation
+# eyeballing initial parameters for numerical optimisation
 hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white", breaks = 100)
 curve(dnorm(x, 0, sd(data$return[-1])), add = TRUE)
 curve(dnorm(x, 0, 0.005), add = TRUE)
@@ -91,12 +97,12 @@ phi0 = 0.9
 sigma0 = 0.65
 beta0 = 0.02
 mu0 = 0.001
-qnorm(0.025, 0, sigma0/sqrt(1-phi0^2)) # 0.025 quantiale of stationary distribution
+qnorm(0.025, 0, sigma0/sqrt(1-phi0^2)) # 0.025 quantiale of stationary distribution -> to find a good range
 
 # working scale initial parameter vector
 theta.star0 = c(qlogis(phi0), log(sigma0), log(beta0), mu0)
 
-mod_BC1 = nlm(mllk_ssm_short, theta.star0, y = data$return, bm = 3.5, m = 200,
+mod_BC1 = nlm(mllk_ssm_fast, theta.star0, y = data$return, bm = 3.5, m = 200,
                     print.level = 2, hessian = TRUE, stepmax = 10)
 
 # obtaining the estimated parameters
@@ -107,27 +113,16 @@ mod_BC1 = nlm(mllk_ssm_short, theta.star0, y = data$return, bm = 3.5, m = 200,
 qnorm(0.025, 0, sigma/sqrt(1-phi^2))
 
 I = solve(mod_BC1$hessian)
-# standard deviations with delta method
-# sd_phi = sqrt(I[1,1]*(
-#   exp(mod_BC1$estimate[1])/
-#     (1+exp(mod_BC1$estimate[1]))^2
-#   )^2)
-# sd_sigma = sqrt(I[2,2]*exp(mod_BC1$estimate[2])^2)
-# sd_beta = sqrt(I[3,3]*exp(mod_BC1$estimate[3])^2)
-# sd_mu = sqrt(I[4,4])
-# 
-# round(sd_phi, 3)
-# round(sd_sigma, 3)
-# round(sd_beta, 3)
-# round(sd_mu, 4)
+sd = sqrt(diag(I))
 
 # confidence intervals
 
-sd = sqrt(diag(I))
 phiCI = plogis(mod_BC1$estimate[1] + 1.96 * c(-1,1) * sd[1])
 sigmaCI = exp(mod_BC1$estimate[2] + 1.96 * c(-1,1) * sd[2])
 betaCI = exp(mod_BC1$estimate[3] + 1.96 * c(-1,1) * sd[3])
 muCI = mod_BC1$estimate[4] + 1.96 * c(-1,1) * sd[4]
+
+# estimated parameters and confidence intervals
 
 round(beta, 3)
 round(betaCI, 3)
@@ -142,10 +137,7 @@ round(mu, 4)
 round(muCI, 4)
 
 
-
-
-
-# Results -----------------------------------------------------------------
+# Visualizing the results -------------------------------------------------
 
 ## state decoding
 bm = 3.5; m = 200
@@ -162,7 +154,7 @@ allprobs = matrix(1, length(data$return), m)
 ind = which(!is.na(data$return))
 allprobs[ind,] = t(sapply(data$return[ind], dnorm, mean = mu, sd = beta * exp(bstar/2)))
 
-mod_BC1$rawstates = viterbi(delta, Gamma, allprobs)
+mod_BC1$rawstates = LaMa::viterbi(delta, Gamma, allprobs)
 mod_BC1$states = bstar[mod_BC1$rawstates]
 
 
@@ -184,8 +176,7 @@ date = as.POSIXct(data$Date)
 ind = (length(date)-1000):length(date)
 plot(date[ind], data$return[ind], yaxt = "n", 
      type = "l", bty = "n", ylab = "", ylim = c(-0.4, 0.2), xlab = "date")
-# lines(date[ind], (2*beta*exp(mod_BC1$states/2)-0.4)[ind], type = "l", lwd = 2, col = "black") # viterbi
-# lines(date[ind], (2*beta*exp(bstar[med]/2)-0.4)[ind], type = "l", lwd = 2, col = "orange") # median
+
 lines(date[ind], (2*beta*exp(Mean/2)-0.4)[ind], type = "l", lwd = 1, col = "orange") # mean
 Interval = 2*beta*exp(quant/2)-0.4
 polygon(c(date[ind], rev(date[ind])), c(Interval[ind,1], rev(Interval[ind,2])), 
@@ -196,78 +187,15 @@ mtext("volatility", side=4, line=3, at = -0.3)
 mtext("return", side=2, line=3, at = 0)
 dev.off()
 
-# Calculating VaR ---------------------------------------------------------
-
-library(expm)
-
-# calculating the scaled forward variables
-# first unscaled, but on log scale
-lalpha = LaMa:::logalpha_cpp(allprobs, delta, array(Gamma, dim = c(m,m,nrow(allprobs)-1)))
-# function to evaluate the density of the forecast distribution
-
-dforecast = function(x, lalpha, t, Gamma, step = 1, mu, beta, bm=3.5){
-  # calculating the scaled forward variable at time point of interest
-  lalphaT = lalpha[t,]
-  ma = max(lalphaT)
-  phiT = exp(lalphaT-ma)/sum(exp(lalphaT-ma))
-  # details for numerical integration
-  m = dim(Gamma)[1]
-  b = seq(-bm, bm, length = m+1)
-  h = b[2]-b[1] # interval width
-  bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
-  # calculating state-dependent probs for all values in x
-  allprobs = t(sapply(x, dnorm, mean = mu, sd = beta * exp(bstar/2)))
-  out = rep(NA, length(x))
-  # forecast distribution
-  for(i in 1:length(x)){
-    out[i] = sum(phiT%*%(Gamma%^%step)%*%diag(allprobs[i,]))
-  }
-  out
-}
-
-xseq = seq(-0.25, 0.25, length=400)
-h2 = 0.5/400
-
-for(t in (nrow(data)-20) : (nrow(data)-1)){
-  pred = dforecast(xseq, lalpha, t=t, Gamma, mu=mu, beta=beta, bm=bm)
-  pred = pred/sum(pred) # we have to normalize
-  plot(xseq, pred/h, type = "l", main = t, bty = "n", lwd = 2)
-  # deviding by h to plot the density
-  abline(v=data$return[t+1])
-  # plotting the observed data point
-  Sys.sleep(0.4)
-}
-
-## actually calculating VaR based on forecast distribution
-alpha = 0.01 # confidence level
-pred = dforecast(xseq, lalpha, t=nrow(data), Gamma, mu=mu, beta=beta, bm=bm)
-pred = pred / sum(pred)
-smaller = which(cumsum(pred)<alpha) # find the values that have smaller cum prob
-VaR = -xseq[smaller[length(smaller)]]
-
-library(scales)
-
-pdf("./figs/VaR.pdf", width = 7, height = 4)
-dens = pred/h2
-ind = 1:which.min((xseq+VaR)^2)
-plot(NA, main = paste("Value at Risk =",round(VaR,3)), xlim = c(-0.2,0.2), ylim = c(0, 15),
-     xlab = "return", ylab = "density", bty = "n")
-polygon(c(xseq[ind], rev(xseq[ind])), c(rep(0, length(ind)), rev(dens[ind])), 
-        col = alpha("orange",0.4), border = F)
-lines(xseq, dens, lwd = 2)
-abline(v = -VaR, col = "orange", lwd = 2)
-dev.off()
-
-
-
 
 # Calculating VaR for model validation ------------------------------------
 
+# defining training and test data
 data$date = as.POSIXct(data$Date)
 trainInd = which(data$date < "2021-01-01")
 testInd = which(data$date >= "2021-01-01")
 
-mod_BC2 = nlm(mllk_ssm_short, theta.star0, y = data$return[trainInd], bm = 3.5, m = 200,
+mod_BC2 = nlm(mllk_ssm_fast, theta.star0, y = data$return[trainInd], bm = 3.5, m = 200,
               print.level = 2, hessian = TRUE, stepmax = 10)
 
 # obtaining the estimated parameters
@@ -294,8 +222,8 @@ allprobs[ind,] = t(sapply(data$return[ind], dnorm, mean = mu, sd = beta * exp(bs
 # calculating the scaled forward variables
 # first unscaled, but on log scale
 lalpha = LaMa:::logalpha_cpp(allprobs, delta, array(Gamma, dim = c(m,m,nrow(allprobs)-1)))
-# function to evaluate the density of the forecast distribution
 
+# defining a function that evaluates the density of the forecast distribution
 dforecast = function(x, delta, Gamma, lalpha, day, step = 1, mu, beta, bm = 3.5){
   # calculating the scaled forward variable at time point of interest
   lalphaT = lalpha[day,]
@@ -312,9 +240,10 @@ dforecast = function(x, delta, Gamma, lalpha, day, step = 1, mu, beta, bm = 3.5)
   rowSums(matrix(phiT%*%(Gamma%^%step), nrow = nrow(allprobs), ncol = m, byrow = TRUE) * allprobs)
 }
 
-xseq = seq(-0.25, 0.25, length = 400)
-mVaR = rep(NA, length(testInd))
+xseq = seq(-0.4, 0.4, length = 500) # range of the returns
+mVaR = rep(NA, length(testInd)) # minus value at risk vector for each day in the test data
 
+# calculating forecast distribution for each test day and comparing to actual observed return
 for(i in 1:length(testInd)){
   pred = dforecast(xseq, delta, Gamma, lalpha, day = testInd[i]-1, mu=mu, beta=beta, bm=bm)
   pred = pred / sum(pred)
