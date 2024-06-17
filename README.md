@@ -4,7 +4,7 @@ This repository contains R code for the case studies presented in the paper "How
 
 The code is organized as follows: Each case study presented in the paper has its own `.R` file. The files are:
 
-* [HMM_Application.R]("https://github.com/janoleko/LatentMarkov/blob/main/HMM_Application.R"): Illustrating discrete-time HMMs by analysing the movement track of an elephant
+* <a href="https://github.com/janoleko/LatentMarkov/blob/main/HMM_Application.R">`HMM_Application.R`]</a>: Illustrating discrete-time HMMs by analysing the movement track of an elephant
 from Etosha National Park.
 * `ctHMM_Application.R`: Illustrating continuous-time HMMS by analysing data collected on forced expiratory volumes (FEV)
 measured for lung transplant recipients.
