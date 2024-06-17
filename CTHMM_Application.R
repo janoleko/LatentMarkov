@@ -6,6 +6,7 @@ library(msm)
 # install.packages("LaMa")
 library(LaMa)
 
+
 # Data --------------------------------------------------------------------
 
 data = fev # data from the msm package
@@ -21,7 +22,7 @@ sum(sapply(datalist, function(X) sum(X$fev == 999)))
 # 96 patients died
 
 plot(data$days, data$fev, xlab = "time", ylab = "fav", bty = "n", pch = 20)
-hist(data$fev, prob = T, border = "white", main = "Histogram of fev", xlab = "fev")
+hist(data$fev, prob = T, border = "white", main = "Histogram of fev", xlab = "fev", breaks = 100)
 
 # 999 codes death: we will just use it as is, as it is so far from all other values
 
@@ -30,38 +31,8 @@ hist(data$fev, prob = T, border = "white", main = "Histogram of fev", xlab = "fe
 
 # Defining the negative log-likelihood function ---------------------------
 
-mllk_ct_short = function(theta.star, X){
-  beta = matrix(theta.star[1:4], ncol = 2)
-  sigma = exp(theta.star[4+1:2])
-  # structured generator matrix
-  Q = matrix(0, 3, 3)
-  Q[1,2:3] = exp(theta.star[6+1:2])
-  Q[2,3] = exp(theta.star[9])
-  diag(Q) = -rowSums(Q)
-  delta = c(exp(theta.star[10:11]),0)
-  delta = delta/sum(delta)
-  # for the rest: loop over patients
-  l = 0 # initialize log likelihood
-  ptnums = unique(X$ptnum) # patient numbers
-  for(i in ptnums){
-    X_p = X[which(X$ptnum==i),]
-    n_p = nrow(X_p)
-    timediff = diff(X_p$days)
-    Qube = LaMa::tpm_cont(Q, timediff) # exp(Q*dt)
-    allprobs = matrix(1, nrow = n_p, ncol = 3)
-    ind = which(!is.na(X_p$fev))
-    for(j in 1:2){
-      allprobs[ind,j] = dnorm(X_p$fev[ind], beta[j,1]+beta[j,2]*X_p$acute[ind], sigma[j])
-    }
-    allprobs[,3] = 0
-    allprobs[which(X_p$fev==999),] = c(0,0,1)
-    # forward algorithm to calculate the log-likelihood recursively
-    l = l + LaMa::forward_g(delta, Qube, allprobs)
-  }
-  return(-l)
-}
-
-mllk_ct_long = function(theta.star, X){
+### long version
+mllk_ct_slow = function(theta.star, X){
   beta = matrix(theta.star[1:4], ncol = 2)
   sigma = exp(theta.star[4+1:2])
   # structured generator matrix
@@ -103,6 +74,38 @@ mllk_ct_long = function(theta.star, X){
   return(-l)
 }
 
+### short version using the package LaMa
+mllk_ct_fast = function(theta.star, X){
+  beta = matrix(theta.star[1:4], ncol = 2)
+  sigma = exp(theta.star[4+1:2])
+  # structured generator matrix
+  Q = matrix(0, 3, 3)
+  Q[1,2:3] = exp(theta.star[6+1:2])
+  Q[2,3] = exp(theta.star[9])
+  diag(Q) = -rowSums(Q)
+  delta = c(exp(theta.star[10:11]),1)
+  delta = delta/sum(delta)
+  # for the rest: loop over patients
+  l = 0 # initialize log likelihood
+  ptnums = unique(X$ptnum) # patient numbers
+  for(i in ptnums){
+    X_p = X[which(X$ptnum==i),]
+    n_p = nrow(X_p)
+    timediff = diff(X_p$days)
+    Qube = LaMa::tpm_cont(Q, timediff) # exp(Q*dt)
+    allprobs = matrix(1, nrow = n_p, ncol = 3)
+    ind = which(!is.na(X_p$fev))
+    for(j in 1:2){
+      allprobs[ind,j] = dnorm(X_p$fev[ind], beta[j,1]+beta[j,2]*X_p$acute[ind], sigma[j])
+    }
+    allprobs[,3] = 0
+    allprobs[which(X_p$fev==999),] = c(0,0,1)
+    # forward algorithm to calculate the log-likelihood recursively
+    l = l + LaMa::forward_g(delta, Qube, allprobs)
+  }
+  return(-l)
+}
+
 
 # Model fitting -----------------------------------------------------------
 
@@ -115,7 +118,7 @@ qs0 = rep(1/100, 3)
 theta.star0 = c(beta0, rep(0,2), log(sd0), log(qs0), rep(0,2))
 
 # fitting the model by numerically optimising the log-likelihood with nlm
-mod_fev5 = nlm(mllk_ct_short, theta.star0, X = data,
+mod_fev5 = nlm(mllk_ct_fast, theta.star0, X = data,
                iterlim = 1000, print.level = 2, stepmax = 10, hessian = TRUE)
 I_fev5 = solve(mod_fev5$hessian)
 
@@ -163,7 +166,7 @@ for(i in ptnums){
   states[which(data$ptnum==i)] = viterbi_g(delta, Qube, allprobs)
 }
 
-
+# empirical state frequencies for accute = 0 and accute = 1
 (delta0 = c(sum(states[which(data$acute==0)]==1), 
            sum(states[which(data$acute==0)]==2))/nrow(data[which(data$acute==0),]))
 (delta1 = c(sum(states[which(data$acute==1)]==1), 
@@ -171,9 +174,12 @@ for(i in ptnums){
 # probabilty of being in the diseased state is much higher after infection
 
 
+
+# Figure as shown in the paper --------------------------------------------
+
 color = c("orange", "deepskyblue")
 pdf("./figs/cthmm_marginal.pdf", width = 8, height = 4)
-# pseudo marginal distribution without and with accute infection in the last 14 days
+# marginal distribution without and with accute infection in the last 14 days
 par(mfrow = c(1,2))
 hist(data$fev[which(data$acute==0)], prob = T, border = "white", ylab = "density",
      main = "accute = 0", xlab = "fev", breaks = 150, ylim = c(0,0.02), xlim = c(0,150))
