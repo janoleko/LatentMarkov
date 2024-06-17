@@ -35,61 +35,65 @@ for(i in 1:4){
 dev.off()
 
 
-# Writing the negative log-likelihood function ----------------------------
+# Loading the negative log-likelihood function ----------------------------
 
-mllk_mmpp = function(theta.star, timediff, N=2){
-  lambda = exp(theta.star[1:N]) # state specific rates
-  Q = diag(N) # generator matrix
-  Q[!Q] = exp(theta.star[N+1:(N*(N-1))])
-  diag(Q) = 0
-  diag(Q) = -rowSums(Q)
-  delta = solve(t(Q+1), rep(1,N), tol = 1e-20) # stationary initial distribution
-  # we split the Omega matrix into (Q-Lambda)*dt and Lambda
-  Qube = LaMa::tpm_cont(Q-diag(lambda), timediff) # (Q-Lambda)*dt
-  allprobs = matrix(lambda, nrow = length(timediff)+1, ncol = N, byrow = T) # Lambda
-  allprobs[1,] = 1 # no Lambda matrix at the start of the likelihood
-  # forward algorithm in C++ using LaMa
-  -LaMa::forward_g(delta, Qube, allprobs)
-}
+source("likelihood_functions.R")
 
-mllk_mmpp_slow = function(theta.star, timediff, N=2){
-  lambda = exp(theta.star[1:N]) # state specific rates
-  Q = diag(N) # generator matrix
-  Q[!Q] = exp(theta.star[N+1:(N*(N-1))])
-  diag(Q) = 0
-  diag(Q) = -rowSums(Q)
-  delta = solve(t(Q+1), rep(1,N), tol = 1e-20)
-  # we split the Omega matrix into (Q-Lambda)*dt and Lambda
-  Qube = array(dim = c(N,N,length(timediff)))
-  for(t in 1:length(timediff)){
-    Qube[,,t] = expm::expm((Q-diag(lambda))*timediff[t])
-  }
-  allprobs = matrix(lambda, nrow = length(timediff)+1, ncol = N, byrow = T) # Lambda
-  allprobs[1,] = 1 # no Lambda matrix at the start of the likelihood
-  # forward algorithm in R
-  foo = delta%*%diag(allprobs[1,])
-  l = log(sum(foo))
-  phi = foo / sum(foo)
-  for(t in 1:length(timediff)){
-    foo = phi %*% Qube[,,t] %*% diag(allprobs[t+1,])
-    l = l + log(sum(foo))
-    phi = foo / sum(foo)
-  }
-  -l
-}
+### longer version in base R
+# mllk_mmpp_slow = function(theta.star, timediff, N=2){
+#   lambda = exp(theta.star[1:N]) # state specific rates
+#   Q = diag(N) # generator matrix
+#   Q[!Q] = exp(theta.star[N+1:(N*(N-1))])
+#   diag(Q) = 0
+#   diag(Q) = -rowSums(Q)
+#   delta = solve(t(Q+1), rep(1,N), tol = 1e-20)
+#   # we split the Omega matrix into (Q-Lambda)*dt and Lambda
+#   Qube = array(dim = c(N,N,length(timediff)))
+#   for(t in 1:length(timediff)){
+#     Qube[,,t] = expm::expm((Q-diag(lambda))*timediff[t])
+#   }
+#   allprobs = matrix(lambda, nrow = length(timediff)+1, ncol = N, byrow = T) # Lambda
+#   allprobs[1,] = 1 # no Lambda matrix at the start of the likelihood
+#   # forward algorithm in R
+#   foo = delta%*%diag(allprobs[1,])
+#   l = log(sum(foo))
+#   phi = foo / sum(foo)
+#   for(t in 1:length(timediff)){
+#     foo = phi %*% Qube[,,t] %*% diag(allprobs[t+1,])
+#     l = l + log(sum(foo))
+#     phi = foo / sum(foo)
+#   }
+#   -l
+# }
+
+### short version using the package LaMa
+# mllk_mmpp_fast = function(theta.star, timediff, N=2){
+#   lambda = exp(theta.star[1:N]) # state specific rates
+#   Q = diag(N) # generator matrix
+#   Q[!Q] = exp(theta.star[N+1:(N*(N-1))])
+#   diag(Q) = 0
+#   diag(Q) = -rowSums(Q)
+#   delta = solve(t(Q+1), rep(1,N), tol = 1e-20) # stationary initial distribution
+#   # we split the Omega matrix into (Q-Lambda)*dt and Lambda for efficiency
+#   Qube = LaMa::tpm_cont(Q-diag(lambda), timediff) # (Q-Lambda)*dt
+#   allprobs = matrix(lambda, nrow = length(timediff)+1, ncol = N, byrow = T) # Lambda
+#   allprobs[1,] = 1 # no Lambda matrix at the start of the likelihood
+#   # forward algorithm in C++ using LaMa
+#   -LaMa::forward_g(delta, Qube, allprobs)
+# }
 
 
 # Model fitting -----------------------------------------------------------
 
-lambda = 1 / c(quantile(unlist(surftimes), 0.4), quantile(unlist(surftimes), 0.6))
-qs = rep(mean(lambda)/5, 2)
+lambda0 = 1 / c(quantile(unlist(surftimes), 0.4), quantile(unlist(surftimes), 0.6))
+qs0 = rep(mean(lambda0)/5, 2)
 
 # initial values
-theta.star = log(c(lambda, qs))
+theta.star = log(c(lambda0, qs0))
 
 mods = list() # separate models for all animals
 for(i in 1:length(surftimes)){
-  mods[[i]] = nlm(mllk_mmpp, theta.star, timediff = diff(surftimes[[i]]), N = 2,
+  mods[[i]] = nlm(mllk_mmpp_fast, theta.star, timediff = diff(surftimes[[i]]), N = 2,
           print.level = 2, iterlim = 1000, stepmax = 10, hessian = TRUE)
 }
 
@@ -102,8 +106,12 @@ for(i in 1:length(mods)){
   Qs[i,] = exp(mods[[i]]$estimate[4:3])
 }
 
+# Rates for each animal
 Lambdas
 Qs
 
-round(colMeans(1/Lambdas), 2)
-round(colMeans(1/Qs), 2)
+# average waiting times for each animal
+round(1 / Lambdas, 2)
+# average sojoun time for each animal
+round(1 / Qs, 2)
+

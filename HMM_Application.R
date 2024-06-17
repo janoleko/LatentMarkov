@@ -47,69 +47,71 @@ summary(data$step)
 data$timestamp[1]; data$timestamp[nrow(data)]
 
 
-# Defining the negative log-likelihood function ---------------------------
+# Loading the negative log-likelihood function ----------------------------
+
+source("likelihood_functions.R")
 
 ## homogeneous HMM
 
 ### long version
-mllk_slow = function(theta.star, X, N){
-  # transforming working parameters to natural
-  ## parameters for state-dependent distributions
-  mu = exp(theta.star[1:N])
-  sigma = exp(theta.star[N+1:N])
-  mu.turn = theta.star[2*N+1:N]
-  kappa = exp(theta.star[3*N+1:N])
-  ## transition probability matrix
-  Gamma = diag(N)
-  Gamma[!Gamma] = exp(theta.star[4*N+1:(N*(N-1))])
-  Gamma = Gamma / rowSums(Gamma)
-  ## initial distribution -> stationary
-  delta = solve(t(diag(N)-Gamma+1), rep(1,N))
-  # allprobs matrix of state-dependent densities
-  allprobs = matrix(1, nrow(X), N)
-  ind = which(!is.na(X$step) & !is.na(X$angle))
-  for(j in 1:N){
-    allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
-      CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
-  }
-  # forward algorithm to calculate the log-likelihood recursively
-  foo = delta%*%diag(allprobs[1,])
-  l = log(sum(foo))
-  phi = foo / sum(foo)
-  for(t in 2:nrow(X)){
-    foo = phi%*%Gamma%*%diag(allprobs[t,])
-    l = l + log(sum(foo))
-    phi = foo / sum(foo)
-  }
-  return(-l)
-}
-
-### short version using the package LaMa
-library(LaMa)
-
-# with the building-block functions from the R package Lcpp, we can write the 
-# negative log-likelihood function much shorter and make it fuch faster (by a factor of 10-20).
-mllk_fast = function(theta.star, X, N){
-  # transforming working parameters to natural
-  ## parameters for state-dependent distributions
-  mu = exp(theta.star[1:N])
-  sigma = exp(theta.star[N+1:N])
-  mu.turn = theta.star[2*N+1:N]
-  kappa = exp(theta.star[3*N+1:N])
-  ## transition probability matrix
-  Gamma = LaMa::tpm(theta.star[4*N+1:(N*(N-1))]) # convenient LaMa function
-  ## initial distribution -> stationary
-  delta = LaMa::stationary(Gamma) # convenient LaMa function
-  # allprobs matrix of state-dependent densities
-  allprobs = matrix(1, nrow(X), N)
-  ind = which(!is.na(X$step) & !is.na(X$angle))
-  for(j in 1:N){
-    allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
-      CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
-  }
-  # forward algorithm to calculate the log-likelihood recursively
-  -LaMa::forward(delta, Gamma, allprobs) # convenient LaMa function
-}
+# mllk_slow = function(theta.star, X, N){
+#   # transforming working parameters to natural
+#   ## parameters for state-dependent distributions
+#   mu = exp(theta.star[1:N])
+#   sigma = exp(theta.star[N+1:N])
+#   mu.turn = theta.star[2*N+1:N]
+#   kappa = exp(theta.star[3*N+1:N])
+#   ## transition probability matrix
+#   Gamma = diag(N)
+#   Gamma[!Gamma] = exp(theta.star[4*N+1:(N*(N-1))])
+#   Gamma = Gamma / rowSums(Gamma)
+#   ## initial distribution -> stationary
+#   delta = solve(t(diag(N)-Gamma+1), rep(1,N))
+#   # allprobs matrix of state-dependent densities
+#   allprobs = matrix(1, nrow(X), N)
+#   ind = which(!is.na(X$step) & !is.na(X$angle))
+#   for(j in 1:N){
+#     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
+#       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
+#   }
+#   # forward algorithm to calculate the log-likelihood recursively
+#   foo = delta%*%diag(allprobs[1,])
+#   l = log(sum(foo))
+#   phi = foo / sum(foo)
+#   for(t in 2:nrow(X)){
+#     foo = phi%*%Gamma%*%diag(allprobs[t,])
+#     l = l + log(sum(foo))
+#     phi = foo / sum(foo)
+#   }
+#   return(-l)
+# }
+# 
+# ### short version using the package LaMa
+# library(LaMa)
+# 
+# # with the building-block functions from the R package Lcpp, we can write the 
+# # negative log-likelihood function much shorter and make it fuch faster (by a factor of 10-20).
+# mllk_fast = function(theta.star, X, N){
+#   # transforming working parameters to natural
+#   ## parameters for state-dependent distributions
+#   mu = exp(theta.star[1:N])
+#   sigma = exp(theta.star[N+1:N])
+#   mu.turn = theta.star[2*N+1:N]
+#   kappa = exp(theta.star[3*N+1:N])
+#   ## transition probability matrix
+#   Gamma = LaMa::tpm(theta.star[4*N+1:(N*(N-1))]) # convenient LaMa function
+#   ## initial distribution -> stationary
+#   delta = LaMa::stationary(Gamma) # convenient LaMa function
+#   # allprobs matrix of state-dependent densities
+#   allprobs = matrix(1, nrow(X), N)
+#   ind = which(!is.na(X$step) & !is.na(X$angle))
+#   for(j in 1:N){
+#     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
+#       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
+#   }
+#   # forward algorithm to calculate the log-likelihood recursively
+#   -LaMa::forward(delta, Gamma, allprobs) # convenient LaMa function
+# }
 
 
 # Fitting a homogeneous HMM -----------------------------------------------
@@ -128,9 +130,6 @@ theta.star0 = c(log(stepMean0), log(stepSd0), # steppars
 # fitting the model by numerically optimising the log-likelihood with nlm
 mod_elephant1 = nlm(mllk_fast, theta.star0, X = data, N = 3, 
                     print.level = 2, hessian = TRUE)
-# or slow
-# mod_elephant1_slow = nlm(mllk_slow, theta.star0, X = data, N = 3,
-#                     print.level = 2, hessian = TRUE)
 
 # obtaining the estimated parameters
 ## parameters for state-dependent distributions
@@ -213,74 +212,74 @@ plot(data$timestamp, data$angle, col = color[mod_elephant1$states], bty = "n",
 # likelihood functions
 
 ### long version
-mllk_HMM_slow = function(theta.star, X, N){
-  # transforming working parameters to natural
-  ## parameters for state-dependent distributions
-  mu = exp(theta.star[1:N])
-  sigma = exp(theta.star[N+1:N])
-  mu.turn = theta.star[2*N+1:N]
-  kappa = exp(theta.star[3*N+1:N])
-  ## regression coefs for tpm
-  beta = matrix(theta.star[4*N+1:(3*N*(N-1))], ncol = 3)
-  ## 24 unique tpms
-  Gamma = array(dim = c(N,N,24))
-  tod = unique(data$timeOfDay)
-  for(t in 1:24){
-    gamma = diag(N)
-    gamma[!gamma] = exp(beta[,1] + beta[,2]*sin(2*pi*tod[t]/24) +
-                          beta[,3]*cos(2*pi*tod[t]/24))
-    Gamma[,,t] = gamma / rowSums(gamma)
-  }
-  ## initial distribution -> periodically stationary (Koslik et al., 2023)
-  GammaT = Gamma[,,X$timeOfDay2[1]]
-  for(t in 2:24) GammaT = GammaT%*%Gamma[,,X$timeOfDay2[t]]
-  delta = solve(t(diag(N)-GammaT+1), rep(1,N))
-  # allprobs matrix of state-dependent densities
-  allprobs = matrix(1, nrow(X), N)
-  ind = which(!is.na(X$step) & !is.na(X$angle))
-  for(j in 1:N){
-    allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
-      CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
-  }
-  # forward algorithm to calculate the log-likelihood recursively
-  foo = delta%*%diag(allprobs[1,])
-  l = log(sum(foo))
-  phi = foo / sum(foo)
-  for(t in 2:nrow(X)){
-    foo = phi%*%Gamma[,,X$timeOfDay2[t]]%*%diag(allprobs[t,])
-    l = l + log(sum(foo))
-    phi = foo / sum(foo)
-  }
-  return(-l)
-}
+# mllk_HMM_slow = function(theta.star, X, N){
+#   # transforming working parameters to natural
+#   ## parameters for state-dependent distributions
+#   mu = exp(theta.star[1:N])
+#   sigma = exp(theta.star[N+1:N])
+#   mu.turn = theta.star[2*N+1:N]
+#   kappa = exp(theta.star[3*N+1:N])
+#   ## regression coefs for tpm
+#   beta = matrix(theta.star[4*N+1:(3*N*(N-1))], ncol = 3)
+#   ## 24 unique tpms
+#   Gamma = array(dim = c(N,N,24))
+#   tod = unique(data$timeOfDay)
+#   for(t in 1:24){
+#     gamma = diag(N)
+#     gamma[!gamma] = exp(beta[,1] + beta[,2]*sin(2*pi*tod[t]/24) +
+#                           beta[,3]*cos(2*pi*tod[t]/24))
+#     Gamma[,,t] = gamma / rowSums(gamma)
+#   }
+#   ## initial distribution -> periodically stationary (Koslik et al., 2023)
+#   GammaT = Gamma[,,X$timeOfDay2[1]]
+#   for(t in 2:24) GammaT = GammaT%*%Gamma[,,X$timeOfDay2[t]]
+#   delta = solve(t(diag(N)-GammaT+1), rep(1,N))
+#   # allprobs matrix of state-dependent densities
+#   allprobs = matrix(1, nrow(X), N)
+#   ind = which(!is.na(X$step) & !is.na(X$angle))
+#   for(j in 1:N){
+#     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
+#       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
+#   }
+#   # forward algorithm to calculate the log-likelihood recursively
+#   foo = delta%*%diag(allprobs[1,])
+#   l = log(sum(foo))
+#   phi = foo / sum(foo)
+#   for(t in 2:nrow(X)){
+#     foo = phi%*%Gamma[,,X$timeOfDay2[t]]%*%diag(allprobs[t,])
+#     l = l + log(sum(foo))
+#     phi = foo / sum(foo)
+#   }
+#   return(-l)
+# }
 
 ### short version using the package LaMa
-mllk_HMM_fast = function(theta.star, X, N){
-  # transforming working parameters to natural
-  ## parameters for state-dependent distributions
-  mu = exp(theta.star[1:N])
-  sigma = exp(theta.star[N+1:N])
-  mu.turn = theta.star[2*N+1:N]
-  kappa = exp(theta.star[3*N+1:N])
-  ## regression coefs for tpm
-  beta = matrix(theta.star[4*N+1:(3*N*(N-1))], ncol = 3)
-  ## 24 unique tpms
-  Gamma = tpm_p(tod = unique(X$timeOfDay), L=24, beta=beta) 
-  # tpm_p() does the sine and cosine expansion by default. For even higher efficiency, 
-  # a design matrix should be calculated before model fitting, which can be supplied to tpm_p(). 
-  # But this way is more convenient, when speed does not matter too much.
-  ## initial distribution -> periodically stationary
-  delta = stationary_p(Gamma, X$timeOfDay2[1])
-  # allprobs matrix of state-dependent densities
-  allprobs = matrix(1, nrow(X), N)
-  ind = which(!is.na(X$step) & !is.na(X$angle))
-  for(j in 1:N){
-    allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
-      CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
-  }
-  # forward algorithm to calculate the log-likelihood recursively
-  -forward_p(delta, Gamma, allprobs, X$timeOfDay2)
-}
+# mllk_HMM_fast = function(theta.star, X, N){
+#   # transforming working parameters to natural
+#   ## parameters for state-dependent distributions
+#   mu = exp(theta.star[1:N])
+#   sigma = exp(theta.star[N+1:N])
+#   mu.turn = theta.star[2*N+1:N]
+#   kappa = exp(theta.star[3*N+1:N])
+#   ## regression coefs for tpm
+#   beta = matrix(theta.star[4*N+1:(3*N*(N-1))], ncol = 3)
+#   ## 24 unique tpms
+#   Gamma = tpm_p(tod = unique(X$timeOfDay), L=24, beta=beta) 
+#   # tpm_p() does the sine and cosine expansion by default. For even higher efficiency, 
+#   # a design matrix should be calculated before model fitting, which can be supplied to tpm_p(). 
+#   # But this way is more convenient, when speed does not matter too much.
+#   ## initial distribution -> periodically stationary
+#   delta = stationary_p(Gamma, X$timeOfDay2[1])
+#   # allprobs matrix of state-dependent densities
+#   allprobs = matrix(1, nrow(X), N)
+#   ind = which(!is.na(X$step) & !is.na(X$angle))
+#   for(j in 1:N){
+#     allprobs[ind,j] = dgamma(X$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
+#       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
+#   }
+#   # forward algorithm to calculate the log-likelihood recursively
+#   -forward_p(delta, Gamma, allprobs, X$timeOfDay2)
+# }
 
 
 # initial parameters for numerical optimisation
