@@ -6,7 +6,7 @@ The code is organized as follows: Each case study presented in the paper has its
 
 * <a href="https://github.com/janoleko/LatentMarkov/blob/main/HMM_Application.R">`HMM_Application.R`</a>: Illustrating discrete-time HMMs by analysing the movement track of an elephant
 from Etosha National Park.
-* <a href="https://github.com/janoleko/LatentMarkov/blob/main/ctHMM_Application.R">`ctHMM_Application.R`</a>: Illustrating continuous-time HMMS by analysing data collected on forced expiratory volumes (FEV)
+* <a href="https://github.com/janoleko/LatentMarkov/blob/main/CTHMM_Application.R">`ctHMM_Application.R`</a>: Illustrating continuous-time HMMS by analysing data collected on forced expiratory volumes (FEV)
 measured for lung transplant recipients.
 * <a href="https://github.com/janoleko/LatentMarkov/blob/main/SSM_Application.R">`SSM_Application.R`</a>: Illustrating SSMs by fitting a stochastic volatility model to daily Bitcoin returns.
 * <a href="https://github.com/janoleko/LatentMarkov/blob/main/ctSSM_Application.R">`ctSSM_Application.R`</a>: Illustrating continuous-time SSMs by analysing seven-metre throws in Handball to find evidence for a hot hand effect.
