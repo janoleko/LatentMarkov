@@ -1,4 +1,4 @@
-# This case study illustrates continuous-time SSMs by analysing seven-metre throws in Handball to find evidence for a hot hand effect.
+# This case study illustrates continuous-time SSMs by analyzing seven-metre throws in Handball to find evidence for a hot hand effect.
 
 # Loading packages --------------------------------------------------------
 
