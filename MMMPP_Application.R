@@ -9,19 +9,7 @@ library(expm)
 
 # Loading the minke whale data --------------------------------------------
 
-mink = scan("./data/divepatterns.txt")
-
-splitInd = which(mink == 1) # split into list by splitInd
-dive = split(mink, cumsum(mink == 1)) # list of 92 individual tracks
-
-# filter for more than 60 observations
-surftimes = dive[which(unlist(lapply(dive, length)) >= 60)]
-# 7 track have more than 60 observations
-
-# we only consider whales 2, 3, 4 and 5 for the application, as the other whales
-# lead to the special case of a homogeneous Poisson process -> absorbing state
-surftimes = surftimes[2:5]
-
+surftimes = readRDS("./data/minkewhales.rds")
 
 # Some EDA ----------------------------------------------------------------
 
