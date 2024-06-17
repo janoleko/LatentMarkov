@@ -1,3 +1,4 @@
+# This case study illustrates continuous-time HMMS by analysing data collected on forced expiratory volumes (FEV) measured for lung transplant recipients.
 
 # Loading packages --------------------------------------------------------
 

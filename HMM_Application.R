@@ -1,3 +1,4 @@
+# This case study illustrates discrete-time HMMs by analysing the movement track of an elephant from Etosha National Park.
 
 # Loading packages --------------------------------------------------------
 

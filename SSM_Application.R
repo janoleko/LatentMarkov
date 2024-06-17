@@ -16,6 +16,8 @@ data$return = c(NA, diff(log(data$Close)))
 data$Date[1]; data$Date[nrow(data)]
 
 
+# This case study illustrates SSMs by fitting a stochastic volatility model to daily Bitcoin returns.
+
 # Some EDA ----------------------------------------------------------------
 
 plot(as.POSIXct(data$Date), data$Close, type = "l", 

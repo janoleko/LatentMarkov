@@ -1,3 +1,4 @@
+# This case study illustrates MMPPs by analysing the surfacing times of minke whales.
 
 # Loading packages --------------------------------------------------------
 
