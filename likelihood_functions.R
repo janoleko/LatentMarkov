@@ -9,6 +9,7 @@ library(LaMa) # just to be save, this will be loaded when the functions are sour
 # install.packages("expm")
 library(expm)
 
+
 # HMM case study ----------------------------------------------------------
 
 ## homogeneous HMM
@@ -222,6 +223,7 @@ mllk_ct_fast = function(theta.star, X){
   }
   return(-l)
 }
+
 
 # State-space model case study --------------------------------------------
 
