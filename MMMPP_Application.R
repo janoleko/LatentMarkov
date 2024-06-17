@@ -11,6 +11,7 @@ library(expm)
 
 surftimes = readRDS("./data/minkewhales.rds")
 
+
 # Some EDA ----------------------------------------------------------------
 
 pdf("./figs/mmpp_divetimes.pdf", width = 7, height = 4)
