@@ -1,6 +1,6 @@
 # LatentMarkov
 
-This repository contains R code for the case studies from the paper "How to build your latent Markov model -- the role of time and space" ().
+This repository contains R code for the case studies from the paper "How to build your latent Markov model - the role of time and space". The paper provides a unified view on HMMs, SSMs and MMMPPs, discussing model choices regarding the operationalization of time and the state space. The code provided here illustrates the concepts discussed in the paper by fitting the models to real-world data.
 
 The code is organized as follows: Each case study presented in the paper has its own .R file. The files are:
 
