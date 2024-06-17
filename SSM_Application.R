@@ -33,58 +33,6 @@ hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white",
 
 source("likelihood_functions.R")
 
-### long version in base R
-# mllk_ssm_slow = function(theta.star, y, bm, m){
-#   # transforming parameters to natural
-#   phi = plogis(theta.star[1])
-#   sigma = exp(theta.star[2])
-#   beta = exp(theta.star[3])
-#   # defining intervals and gridpoints for numerical integration
-#   b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
-#   h = b[2]-b[1] # interval width
-#   bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
-#   # approximating tpm resulting from midpoint quadrature
-#   Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
-#   delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
-#   # approximating state-dependent density based on midpoints
-#   allprobs = matrix(1, length(y), m)
-#   ind = which(!is.na(y))
-#   allprobs[ind] = t(sapply(y[ind], dnorm, mean = 0, sd = beta * exp(bstar/2)))
-#   # forward algorithm to calculate the approximate log-likelihood recursively
-#   foo = delta%*%diag(allprobs[1,])
-#   l = log(sum(foo))
-#   phi = foo / sum(foo)
-#   for(t in 2:nrow(X)){
-#     foo = phi%*%Gamma%*%diag(allprobs[t,])
-#     l = l + log(sum(foo))
-#     phi = foo / sum(foo)
-#   }
-#   return(-l)
-# }
-
-### short version using the package LaMa
-# mllk_ssm_fast = function(theta.star, y, bm, m){
-#   # transforming parameters to natural
-#   phi = plogis(theta.star[1])
-#   sigma = exp(theta.star[2])
-#   beta = exp(theta.star[3])
-#   mu = theta.star[4]
-#   # defining intervals and gridpoints for numerical integration
-#   b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
-#   h = b[2]-b[1] # interval width
-#   bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
-#   # approximating tpm resulting from midpoint quadrature
-#   Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
-#   # Gamma = Gamma / rowSums(Gamma)
-#   delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
-#   # approximating state-dependent density based on midpoints
-#   allprobs = matrix(1, length(y), m)
-#   ind = which(!is.na(y))
-#   allprobs[ind,] = t(sapply(y[ind], dnorm, mean = mu, sd = beta * exp(bstar/2)))
-#   # forward algorithm to calculate the approximate log-likelihood recursively
-#   -forward(delta, Gamma, allprobs)
-# }
-
 
 # Model fitting -----------------------------------------------------------
 
