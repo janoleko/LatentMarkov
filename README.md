@@ -1,3 +1,17 @@
 # LatentMarkov
 
-This repository contains R code for the case studies from the paper "How to build your latent Markov model".
+This repository contains R code for the case studies from the paper "How to build your latent Markov model -- the role of time and space" ().
+
+The code is organized as follows: Each case study presented in the paper has its own .R file. The files are:
+
+* `HMM_Application.R`: Illustrating discrete-time HMMs by analysing the movement track of an elephant
+from Etosha National Park.
+* `ctHMM_Application.R`: Illustrating continuous-time HMMS by analysing data collected on forced expiratory volumes (FEV)
+measured for lung transplant recipients.
+* `SSM_Application.R`: Illustrating state-space models by fitting a stochastic volatility model to daily Bitcoin returns.
+* `ctSSM_Application.R`: Illustrating continuous-time state-space models by analysing seven-metre throws in Handball to find evidence for a hot hand effect.
+* `MMMPP_Application.R`: Illustrating Markov-modulated Poisson processes by analyisng the surfacing times of minke whales.
+
+Additionally, the file `likelihood_functions.R` contains all negative log-likelihood functions used to fit the above models via direct numerical maximum likelihood estimation as explained in the paper. For each fitted model, we provide the vanilla base R version as well as a high performance version using the R package `LaMa` developed for fast statistical inference in all model classes discussed.
+
+The figures presented in the paper are saved in the folder `figs` and all data necessary will either be downloaded automatically by running the case study code, or is included in the folder `data` and will be loaded automatically.
