@@ -3,6 +3,10 @@
 
 # install.packages("LaMa")
 library(LaMa)
+# install.packages("CircStats")
+library(CircStats)
+# install.packages("moveHMM")
+
 
 # Loading the data --------------------------------------------------------
 
@@ -93,9 +97,9 @@ mllk_fast = function(theta.star, X, N){
   mu.turn = theta.star[2*N+1:N]
   kappa = exp(theta.star[3*N+1:N])
   ## transition probability matrix
-  Gamma = LaMa::tpm(theta.star[4*N+1:(N*(N-1))])
+  Gamma = LaMa::tpm(theta.star[4*N+1:(N*(N-1))]) # convenient LaMa function
   ## initial distribution -> stationary
-  delta = LaMa::stationary(Gamma)
+  delta = LaMa::stationary(Gamma) # convenient LaMa function
   # allprobs matrix of state-dependent densities
   allprobs = matrix(1, nrow(X), N)
   ind = which(!is.na(X$step) & !is.na(X$angle))
@@ -104,7 +108,7 @@ mllk_fast = function(theta.star, X, N){
       CircStats::dvm(X$angle[ind], mu.turn[j], kappa[j])
   }
   # forward algorithm to calculate the log-likelihood recursively
-  -LaMa::forward(delta, Gamma, allprobs)
+  -LaMa::forward(delta, Gamma, allprobs) # convenient LaMa function
 }
 
 
@@ -139,7 +143,7 @@ N = 3
 Gamma = tpm(mod_elephant1$estimate[4*N+1:(N*(N-1))])
 round(Gamma, 3)
 ## stationary distribution (proportion of time spent in each state)
-(delta = stationary(Gamma))
+(delta = LaMa::stationary(Gamma)) # there is also a stationary() function in moveHMM, but here we need LaMa
 
 # visualising the fitted state-dependent and marginal distributions
 color = c("orange", "deepskyblue", "seagreen2") # color vector
@@ -179,16 +183,16 @@ legend("topright", col = color, lwd = 2, legend = paste("state", 1:3), bty = "n"
 
 
 # state decoding
-# for general state decoding we can also use Lcpp. We must however first calculate
-# the allprobs matrix
+# for general state decoding we can also use LaMa. We must however first calculate the allprobs matrix
 allprobs = matrix(1, nrow(data), N)
 ind = which(!is.na(data$step) & !is.na(data$angle))
 for(j in 1:N){
   allprobs[ind,j] = dgamma(data$step[ind], shape=mu[j]^2/sigma[j]^2, scale=sigma[j]^2/mu[j])*
     CircStats::dvm(data$angle[ind], mu.turn[j], kappa[j])
 }
-mod_elephant1$states = viterbi(delta, Gamma, allprobs)
+mod_elephant1$states = LaMa::viterbi(delta, Gamma, allprobs) # in moveHMM there is also a viterbi() function. Avoid confusion
 
+# install.packages("scales")
 library(scales) # for color transparency
 par(mfrow = c(1,1))
 plot(data$x, data$y, type = "l", xlab = "x", ylab = "y")
@@ -201,9 +205,9 @@ plot(data$timestamp, data$angle, col = color[mod_elephant1$states], bty = "n",
      ylab = "turning angle", xlab = "time")
 
 
-# Covariate effects: Time of day ------------------------------------------
+# Covariate effect: Time of day -------------------------------------------
 
-# we assume the animal's behaviour varies with the time of day. 
+# We suspect the animal's behaviour varies with the time of day. 
 # Thus we include the time of day as a covariate in our model.
 
 # likelihood functions
@@ -227,11 +231,9 @@ mllk_HMM_slow = function(theta.star, X, N){
                           beta[,3]*cos(2*pi*tod[t]/24))
     Gamma[,,t] = gamma / rowSums(gamma)
   }
-  ## initial distribution -> periodically stationary
+  ## initial distribution -> periodically stationary (Koslik et al., 2023)
   GammaT = Gamma[,,X$timeOfDay2[1]]
-  for(t in 2:24){
-    GammaT = GammaT%*%Gamma[,,X$timeOfDay2[t]]
-  }
+  for(t in 2:24) GammaT = GammaT%*%Gamma[,,X$timeOfDay2[t]]
   delta = solve(t(diag(N)-GammaT+1), rep(1,N))
   # allprobs matrix of state-dependent densities
   allprobs = matrix(1, nrow(X), N)
@@ -263,7 +265,10 @@ mllk_HMM_fast = function(theta.star, X, N){
   ## regression coefs for tpm
   beta = matrix(theta.star[4*N+1:(3*N*(N-1))], ncol = 3)
   ## 24 unique tpms
-  Gamma = tpm_p(tod = unique(X$timeOfDay), L=24, beta=beta)
+  Gamma = tpm_p(tod = unique(X$timeOfDay), L=24, beta=beta) 
+  # tpm_p() does the sine and cosine expansion by default. For even higher efficiency, 
+  # a design matrix should be calculated before model fitting, which can be supplied to tpm_p(). 
+  # But this way is more convenient, when speed does not matter too much.
   ## initial distribution -> periodically stationary
   delta = stationary_p(Gamma, X$timeOfDay2[1])
   # allprobs matrix of state-dependent densities
@@ -285,9 +290,10 @@ angleMean0 = rep(0,3)
 angleConcentration0 = c(0.1, 0.9, 2)
 
 # working scale initial parameter vector
+set.seed(123)
 theta.star0 = c(log(stepMean0), log(stepSd0), # steppars
                 angleMean0, log(angleConcentration0), # anglepars
-                rep(-2, 6), runif(6*2,-0.1,0.1)) # tpmpars
+                rep(-2, 6), runif(6*2, -0.1, 0.1)) # tpmpars
 
 # fitting the model by numerically optimising the log-likelihood with nlm
 mod_elephant2 = nlm(mllk_HMM_fast, theta.star0, X = data, N = 3, 
@@ -299,8 +305,9 @@ beta = matrix(mod_elephant2$estimate[4*N+1:(3*N*(N-1))], ncol = 3)
 
 # Visualising periodically stationary distribution
 len = 300
-todseq = seq(0,24,length=len)
+todseq = seq(0, 24, length=len)
 Delta = matrix(NA, len, N)
+# here we interpolate to get a smooth version of the periodically stationary distribution
 for(t in 1:len){
   Gamma = tpm_p(tod = (todseq[t]+1:24) %% 24, beta = beta)
   Delta[t,] = stationary_p(Gamma, t = 1)
@@ -328,6 +335,7 @@ for(j in 1:N){
 
 
 # Full Figure -------------------------------------------------------------
+# as shown in the paper
 
 pdf("./figs/hmm_elephant.pdf", width = 8, height = 3)
 
