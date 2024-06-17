@@ -6,12 +6,12 @@ library(fHMM) # makes downloading financial data really easy
 # install.packages("LaMa")
 library(LaMa)
 # install.packages("expm")
-library(expm)
+library(expm) # to compute matrix powers
 
 
 # Downloading data --------------------------------------------------------
 
-data = download_data("BTC-USD", to = "2024-01-06")
+data = download_data("BTC-USD", to = "2024-05-31")
 data$return = c(NA, diff(log(data$Close)))
 data$Date[1]; data$Date[nrow(data)]
 
@@ -31,7 +31,7 @@ hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white",
 
 # Defining the negative log-likelihood function ---------------------------
 
-### long version
+# ### long version
 mllk_ssm_slow = function(theta.star, y, bm, m){
   # transforming parameters to natural
   phi = plogis(theta.star[1])
@@ -43,7 +43,6 @@ mllk_ssm_slow = function(theta.star, y, bm, m){
   bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
   # approximating tpm resulting from midpoint quadrature
   Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
-  Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
   delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
   # approximating state-dependent density based on midpoints
   allprobs = matrix(1, length(y), m)
@@ -74,7 +73,7 @@ mllk_ssm_fast = function(theta.star, y, bm, m){
   bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
   # approximating tpm resulting from midpoint quadrature
   Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
-  Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
+  # Gamma = Gamma / rowSums(Gamma)
   delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
   # approximating state-dependent density based on midpoints
   allprobs = matrix(1, length(y), m)
@@ -84,41 +83,42 @@ mllk_ssm_fast = function(theta.star, y, bm, m){
   -forward(delta, Gamma, allprobs)
 }
 
-### long version using base R (in this case not much longer, but much slower)
-mllk_ssm_fast = function(theta.star, y, bm, m){
-  # transforming parameters to natural
-  phi = plogis(theta.star[1])
-  sigma = exp(theta.star[2])
-  beta = exp(theta.star[3])
-  mu = theta.star[4]
-  # defining intervals and gridpoints for numerical integration
-  b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
-  h = b[2]-b[1] # interval width
-  bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
-  # approximating tpm resulting from midpoint quadrature
-  Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
-  Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
-  delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
-  # approximating state-dependent density based on midpoints
-  allprobs = matrix(1, length(y), m)
-  ind = which(!is.na(y))
-  allprobs[ind,] = t(sapply(y[ind], dnorm, mean = mu, sd = beta * exp(bstar/2)))
-  # forward algorithm to calculate the approximate log-likelihood recursively
-  foo = delta %*% allprobs[1,]
-  l = log(sum(foo))
-  phi = foo / sum(foo)
-  for(t in 2:length(y)){
-    foo = phi %*% Gamma %*% allprobs[t,]
-    l = l + log(sum(foo))
-    phi = foo / sum(foo)
-  }
-  -l
-}
+# ### long version using base R (in this case not much longer, but much slower)
+# mllk_ssm_slow = function(theta.star, y, bm, m){
+#   # transforming parameters to natural
+#   phi = plogis(theta.star[1])
+#   sigma = exp(theta.star[2])
+#   beta = exp(theta.star[3])
+#   mu = theta.star[4]
+#   # defining intervals and gridpoints for numerical integration
+#   b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
+#   h = b[2]-b[1] # interval width
+#   bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
+#   # approximating tpm resulting from midpoint quadrature
+#   Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
+#   # Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
+#   delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
+#   # approximating state-dependent density based on midpoints
+#   allprobs = matrix(1, length(y), m)
+#   ind = which(!is.na(y))
+#   allprobs[ind,] = t(sapply(y[ind], dnorm, mean = mu, sd = beta * exp(bstar/2)))
+#   # forward algorithm to calculate the approximate log-likelihood recursively
+#   foo = delta %*% allprobs[1,]
+#   l = log(sum(foo))
+#   phi = foo / sum(foo)
+#   for(t in 2:length(y)){
+#     foo = phi %*% Gamma %*% allprobs[t,]
+#     l = l + log(sum(foo))
+#     phi = foo / sum(foo)
+#   }
+#   -l
+# }
 
 
 # Model fitting -----------------------------------------------------------
 
 # eyeballing initial parameters for numerical optimisation
+par(mfrow = c(1,1))
 hist(data$return, xlim = c(-0.1,0.1), prob = TRUE, border = "white", breaks = 100)
 curve(dnorm(x, 0, sd(data$return[-1])), add = TRUE)
 curve(dnorm(x, 0, 0.005), add = TRUE)
@@ -128,7 +128,7 @@ phi0 = 0.9
 sigma0 = 0.65
 beta0 = 0.02
 mu0 = 0.001
-qnorm(0.025, 0, sigma0/sqrt(1-phi0^2)) # 0.025 quantiale of stationary distribution -> to find a good range
+qnorm(0.025, 0, sigma0/sqrt(1-phi0^2)) # 0.025 quantiale of stationary distribution -> to find a good essential range
 
 # working scale initial parameter vector
 theta.star0 = c(qlogis(phi0), log(sigma0), log(beta0), mu0)
@@ -178,7 +178,7 @@ h = b[2]-b[1] # interval width
 bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
 # approximating tpm resulting from midpoint quadrature
 Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
-Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
+# Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
 delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
 # approximating state-dependent density based on midpoints
 allprobs = matrix(1, length(data$return), m)
@@ -243,7 +243,7 @@ h = b[2]-b[1] # interval width
 bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
 # approximating tpm resulting from midpoint quadrature
 Gamma = sapply(bstar, dnorm, mean = phi*bstar, sd = sigma) * h
-Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
+# Gamma = Gamma / rowSums(Gamma) # normalizing out approximation errors
 delta = h * dnorm(bstar, 0, sigma/sqrt(1-phi^2)) # stationary distribution of AR(1) process
 # approximating state-dependent density based on midpoints
 allprobs = matrix(1, length(data$return), m)
@@ -255,7 +255,7 @@ allprobs[ind,] = t(sapply(data$return[ind], dnorm, mean = mu, sd = beta * exp(bs
 lalpha = LaMa:::logalpha_cpp(allprobs, delta, array(Gamma, dim = c(m,m,nrow(allprobs)-1)))
 
 # defining a function that evaluates the density of the forecast distribution
-dforecast = function(x, delta, Gamma, lalpha, day, step = 1, mu, beta, bm = 3.5){
+dforecast = function(x, delta, Gamma, lalpha, day, step = 1, mu, beta, bm){
   # calculating the scaled forward variable at time point of interest
   lalphaT = lalpha[day,]
   ma = max(lalphaT)
@@ -271,8 +271,11 @@ dforecast = function(x, delta, Gamma, lalpha, day, step = 1, mu, beta, bm = 3.5)
   rowSums(matrix(phiT%*%(Gamma%^%step), nrow = nrow(allprobs), ncol = m, byrow = TRUE) * allprobs)
 }
 
-xseq = seq(-0.4, 0.4, length = 500) # range of the returns
+xseq = seq(-0.5, 0.5, length = 500) # range of the returns
 mVaR = rep(NA, length(testInd)) # minus value at risk vector for each day in the test data
+
+# defining the confidence level
+alpha = 0.01
 
 # calculating forecast distribution for each test day and comparing to actual observed return
 for(i in 1:length(testInd)){
@@ -282,4 +285,4 @@ for(i in 1:length(testInd)){
   mVaR[i] = xseq[max(smaller)]
 }
 
-round(sum(data$return[testInd] < mVaR) / length(testInd),4)
+round(sum(data$return[testInd] < mVaR) / length(testInd), 4)
