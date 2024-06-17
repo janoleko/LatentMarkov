@@ -4,8 +4,10 @@
 # For each model, we provide two versions of the same function, one only using base R functions
 # computing the forward algorithm in R, and one using our R package LaMa to speed up computation and shortening the code.
 
+# install.packages("LaMa")
 library(LaMa) # just to be save, this will be loaded when the functions are sourced.
-
+# install.packages("expm")
+library(expm)
 
 # HMM case study ----------------------------------------------------------
 
