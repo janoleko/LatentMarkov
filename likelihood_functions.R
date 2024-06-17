@@ -294,9 +294,8 @@ mllk_ctSSM_slow = function(theta.star, X, deltat, bm, m){
   Gamma = array(0, dim = c(m, m, length(deltat))) # transition probability matrices for unique time differences
   for (t in 1:length(deltat)) {
     Dt = deltat[t]
-    G = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar,
-               sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
-    Gamma[,,t] = G / rowSums(G)
+    Gamma[,,t] = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar,
+                        sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
   }
   # initial distribution = stationary distribution of OU process
   delta = dnorm(bstar, 0, sqrt(sigma^2 / (2 * theta))) * h
@@ -339,9 +338,8 @@ mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
   Gamma = array(0, dim = c(m, m, length(deltat))) # transition probability matrices for unique time differences
   for (t in 1:length(deltat)) {
     Dt = deltat[t]
-    G = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar, 
-               sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
-    Gamma[,,t] = G / rowSums(G)
+    Gamma[,,t] = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar, 
+                        sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
   }
   # initial distribution = stationary distribution of OU process
   delta = dnorm(bstar, 0, sqrt(sigma^2 / (2 * theta))) * h 

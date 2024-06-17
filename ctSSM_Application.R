@@ -171,12 +171,12 @@ trackInds = calc_trackInd(as.character(data$uID))
 
 # initial parameter values for numerical optimization
 theta0 = 0.2
-sigma0 = 0.3
+sigma0 = 0.25
 beta0 = qlogis(0.8)
 
 theta.star = c(log(theta0), log(sigma0), plogis(beta0))
 
-modOU = nlm(mllk_ctSSM_fast, theta.star, X = data, deltat = deltat, bm = 3, m = 200,
+modOU = nlm(mllk_ctSSM_fast, theta.star, X = data, deltat = deltat, bm = 3.5, m = 250,
             print.level = 2, iterlim = 1000, hessian = TRUE)
 
 # this is still rather slow, as calculating the transition matrices takes the most time here, 
@@ -215,9 +215,6 @@ round(plogis(beta), 4)
 # ACF deduced from OU process
 exp(-theta * 5) # 92% autocorrelation after one minute
 exp(-theta * 60) # 35% autocorrelation after 60 minutes (entire game)
-
-# plugging in lower CI
-exp(-0.11 * 5) # 58%
 
 
 # sampling from fitted OU process
