@@ -1,4 +1,4 @@
-# LatentMarkov
+# Case studies for "How to build your latent Markov model - the role of time and space"
 
 This repository contains R code for the case studies presented in the paper "How to build your latent Markov model - the role of time and space". The paper provides a unified view on hidden Markov models (HMMs), state-space models (SSMs) and Markov modulated (marked) Poisson processes (MM(M)PPs), discussing model choices regarding the operationalization of time and the state space. The code provided here illustrates the concepts discussed in the paper by fitting the models to real-world data.
 
