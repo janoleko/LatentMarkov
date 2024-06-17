@@ -36,6 +36,13 @@ sum(na.omit(data$step) == 0)
 data$step[which(data$step == 0)] = 1e-5
 
 
+# EDA ---------------------------------------------------------------------
+
+nrow(data)
+summary(data$step)
+data$timestamp[1]; data$timestamp[nrow(data)]
+
+
 # Defining the negative log-likelihood function ---------------------------
 
 ## homogeneous HMM
@@ -118,7 +125,7 @@ theta.star0 = c(log(stepMean0), log(stepSd0), # steppars
 mod_elephant1 = nlm(mllk_fast, theta.star0, X = data, N = 3, 
                     print.level = 2, hessian = TRUE)
 # or slow
-# mod_elephant1 = nlm(mllk_slow, theta.star0, X = data, N = 3, 
+# mod_elephant1_slow = nlm(mllk_slow, theta.star0, X = data, N = 3,
 #                     print.level = 2, hessian = TRUE)
 
 # obtaining the estimated parameters

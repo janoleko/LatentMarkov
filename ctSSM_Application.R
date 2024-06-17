@@ -75,19 +75,16 @@ length(unique(data$matchID)) # in 205 matches
 
 # Defining the negative log-likelihood function ---------------------------
 
-mllk = function(theta.star, X, deltat, bm, m){
+mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
   # OU parameters
   theta = exp(theta.star[1])
   sigma = exp(theta.star[2])
-  
   # state-dependent parameters
   beta = theta.star[3] # intercept
-  
   # construction of intervals for numerical integration
   b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
   h = b[2]-b[1] # interval width
   bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
-  
   # approximate transition densities with time-dependent variance
   Gamma = array(0, dim = c(m, m, length(deltat))) # transition probability matrices for unique time differences
   for (t in 1:length(deltat)) {
@@ -96,9 +93,8 @@ mllk = function(theta.star, X, deltat, bm, m){
                    sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
     Gamma[,,t] = G / rowSums(G)
   }
-  
-  delta = dnorm(bstar, 0, sqrt(sigma^2 / (2 * theta))) * h # initial distribution = stationary distribution of OU process
-  
+  # initial distribution = stationary distribution of OU process
+  delta = dnorm(bstar, 0, sqrt(sigma^2 / (2 * theta))) * h 
   # approximating state-dependent density based on interval midpoints
   allprobs = t(sapply(X$seven_meter_success, dbinom, size = 1, p = plogis(beta + bstar)))
 
@@ -111,9 +107,11 @@ mllk = function(theta.star, X, deltat, bm, m){
   # }
   # -sum(l)
   
-  # forward algorithm using LaMa
+  # forward algorithm to calculate the approximate log-likelihood recursively
   -LaMa::forward_g(delta, Gamma[,,X$match2Array], allprobs, trackInds)
 }
+
+# in this case the
 
 # calculating unique time differences
 deltat = sort(unique(data$timediff))
@@ -133,7 +131,7 @@ trackInds = calc_trackInd(as.character(data$uID))
 theta.star = c(log(0.3), log(0.5), qlogis(0.8))
 
 
-mod = nlm(mllk, theta.star, X = data, deltat = deltat, bm = 3, m = 200,
+mod = nlm(mllk_ctSSM_fast, theta.star, X = data, deltat = deltat, bm = 3, m = 200,
           print.level = 2, iterlim = 1000, hessian = TRUE)
 # this is still rather slow, as calculating the transition matrices takes the most time here
 

@@ -1,12 +1,17 @@
+
+# Loading packages --------------------------------------------------------
+
+# install.packages("msm")
+library(msm)
+# install.packages("LaMa")
+library(LaMa)
+
 # Data --------------------------------------------------------------------
 
-library(msm)
-library(LaMa)
-data = fev
+data = fev # data from the msm package
 
- 
 ## little EDA
-nrow(fev)
+nrow(fev) 
 # 5896 observations
 colnames(fev)
 length(unique(fev$ptnum))
@@ -23,7 +28,8 @@ hist(data$fev, prob = T, border = "white", main = "Histogram of fev", xlab = "fe
 
 # Model with state transition structure -----------------------------------
 
-# really specific likelihood function
+# Defining the negative log-likelihood function ---------------------------
+
 mllk_ct_short = function(theta.star, X){
   beta = matrix(theta.star[1:4], ncol = 2)
   sigma = exp(theta.star[4+1:2])
@@ -97,6 +103,8 @@ mllk_ct_long = function(theta.star, X){
   return(-l)
 }
 
+
+# Model fitting -----------------------------------------------------------
 
 # initial parameters for numerical optimisation
 beta0 = c(100, 50) # intercept
