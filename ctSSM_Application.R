@@ -73,13 +73,50 @@ nrow(data) # 1131 total throws
 length(unique(data$player)) # by 46 players
 length(unique(data$matchID)) # in 205 matches
 
+
 # Defining the negative log-likelihood function ---------------------------
 
+### longer version in base R, in this case only the forward algorithm differs
 mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
-  # OU parameters
+  # OU process parameters
   theta = exp(theta.star[1])
   sigma = exp(theta.star[2])
-  # state-dependent parameters
+  # intercept of the state-dependent process
+  beta = theta.star[3] # intercept
+  # construction of intervals for numerical integration
+  b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
+  h = b[2]-b[1] # interval width
+  bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
+  # approximate transition densities with time-dependent variance
+  Gamma = array(0, dim = c(m, m, length(deltat))) # transition probability matrices for unique time differences
+  for (t in 1:length(deltat)) {
+    Dt = deltat[t]
+    G = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar, 
+               sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
+    Gamma[,,t] = G / rowSums(G)
+  }
+  # initial distribution = stationary distribution of OU process
+  delta = dnorm(bstar, 0, sqrt(sigma^2 / (2 * theta))) * h 
+  # approximating state-dependent density based on interval midpoints
+  allprobs = t(sapply(X$seven_meter_success, dbinom, size = 1, p = plogis(beta + bstar)))
+  
+  # forward algorithm to calculate the approximate log-likelihood recursively
+  uIDs = unique(X$uID)
+  l = rep(NA, length(uIDs))
+  for(i in 1:length(uIDs)){
+    ind = which(X$uID == uIDs[i])
+    Xi = X[ind,]
+    l[i] = forward_g(delta, Gamma[,,Xi$match2Array[-1]], allprobs[ind,])
+  }
+  -sum(l)
+}
+
+### short version using the package LaMa
+mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
+  # OU process parameters
+  theta = exp(theta.star[1])
+  sigma = exp(theta.star[2])
+  # intercept of the state-dependent process
   beta = theta.star[3] # intercept
   # construction of intervals for numerical integration
   b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
@@ -98,25 +135,13 @@ mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
   # approximating state-dependent density based on interval midpoints
   allprobs = t(sapply(X$seven_meter_success, dbinom, size = 1, p = plogis(beta + bstar)))
 
-  # uIDs = unique(X$uID)
-  # l = rep(NA, length(uIDs))
-  # for(i in 1:length(uIDs)){
-  #   ind = which(X$uID == uIDs[i])
-  #   Xi = X[ind,]
-  #   l[i] = forward_g(delta, Gamma[,,Xi$match2Array[-1]], allprobs[ind,])
-  # }
-  # -sum(l)
-  
   # forward algorithm to calculate the approximate log-likelihood recursively
   -LaMa::forward_g(delta, Gamma[,,X$match2Array], allprobs, trackInds)
 }
 
-# in this case the
-
-# calculating unique time differences
+# To avoid redundant calculations, we calculate the unique time differences and match them to the corresponding rows
 deltat = sort(unique(data$timediff))
-# we do this, as there are less unique time differences than overall transitions in the data set
-# this way, we save compuation time.
+# we do this, as there are less unique time differences than overall transitions in the data set, this way saving compuation time.
 
 # creating a column in the data set to match the unique time differences to the corresponding row
 data$match2Array = NA
@@ -126,31 +151,40 @@ for(i in 1:nrow(data)){
   }
 }
 
+# this vector defines where each single track starts and is necessary for LaMa when summing the individual log-likelihoods
 trackInds = calc_trackInd(as.character(data$uID))
 
-theta.star = c(log(0.3), log(0.5), qlogis(0.8))
 
+# Fitting the model -------------------------------------------------------
 
-mod = nlm(mllk_ctSSM_fast, theta.star, X = data, deltat = deltat, bm = 3, m = 200,
-          print.level = 2, iterlim = 1000, hessian = TRUE)
-# this is still rather slow, as calculating the transition matrices takes the most time here
+# initial parameter values for numerical optimization
+theta0 = 0.2
+sigma0 = 0.3
+beta0 = qlogis(0.8)
 
-(theta = exp(mod$estimate[1])) # mean reversion strength of the OU process
-(sigma = exp(mod$estimate[2])) # variability of the OU process
-(beta = mod$estimate[3]) # Intercept of the state-dependent process on logit-scale
+theta.star = c(log(theta0), log(sigma0), plogis(beta0))
+
+modOU = nlm(mllk_ctSSM_fast, theta.star, X = data, deltat = deltat, bm = 3, m = 200,
+            print.level = 2, iterlim = 1000, hessian = TRUE)
+# this is still rather slow, as calculating the transition matrices takes the most time here, 
+# therefore running the forward algorithm in C++ does not help much
+
+(theta = exp(modOU$estimate[1])) # mean reversion strength of the OU process
+(sigma = exp(modOU$estimate[2])) # variability of the OU process
+(beta = modOU$estimate[3]) # Intercept of the state-dependent process on logit-scale
 plogis(beta) # scoring probability when state process in equilibrium
 
 # stationary distribution
 qnorm(0.01, 0, sqrt(sigma^2 / (2 * theta))) # initial distribution = stationary distribution of OU process
 
 # standard errors
-I = solve(mod$hessian)
+I = solve(modOU$hessian)
 se = sqrt(diag(I))
 
-(thetaCI = exp(mod$estimate[1] + 1.96 * se[1]*c(-1,1)))
-(sigmaCI = exp(mod$estimate[2] + 1.96 * se[2]*c(-1,1)))
-(betaCI = mod$estimate[3] + 1.96 * se[3]*c(-1,1))
-(probCI = plogis(mod$estimate[3] + 1.96 * se[3]*c(-1,1)))
+(thetaCI = exp(modOU$estimate[1] + 1.96 * se[1]*c(-1,1)))
+(sigmaCI = exp(modOU$estimate[2] + 1.96 * se[2]*c(-1,1)))
+(betaCI = modOU$estimate[3] + 1.96 * se[3]*c(-1,1))
+(probCI = plogis(modOU$estimate[3] + 1.96 * se[3]*c(-1,1)))
 
 # estimated parameters and confidence intervals
 round(theta, 3)
@@ -208,3 +242,4 @@ for(i in 1:k){
 }
 
 dev.off()
+
