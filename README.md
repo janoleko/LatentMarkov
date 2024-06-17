@@ -4,13 +4,13 @@ This repository contains R code for the case studies presented in the paper "How
 
 The code is organized as follows. Each case study presented in the paper has its own `.R` file. The files are:
 
-* <a href="https://github.com/janoleko/LatentMarkov/blob/main/HMM_Application.R">`HMM_Application.R`</a>: Illustrating discrete-time HMMs by analysing the movement track of an elephant
+* <a href="https://github.com/janoleko/LatentMarkov/blob/main/HMM_Application.R">`HMM_Application.R`</a>: Illustrating discrete-time HMMs by analyzing the movement track of an elephant
 from Etosha National Park.
-* <a href="https://github.com/janoleko/LatentMarkov/blob/main/CTHMM_Application.R">`ctHMM_Application.R`</a>: Illustrating continuous-time HMMs by analysing data collected on forced expiratory volumes (FEV)
+* <a href="https://github.com/janoleko/LatentMarkov/blob/main/CTHMM_Application.R">`ctHMM_Application.R`</a>: Illustrating continuous-time HMMs by analyzing data collected on forced expiratory volumes (FEV)
 measured for lung transplant recipients.
 * <a href="https://github.com/janoleko/LatentMarkov/blob/main/SSM_Application.R">`SSM_Application.R`</a>: Illustrating SSMs by fitting a stochastic volatility model to daily Bitcoin returns.
-* <a href="https://github.com/janoleko/LatentMarkov/blob/main/ctSSM_Application.R">`ctSSM_Application.R`</a>: Illustrating continuous-time SSMs by analysing seven-metre throws in handball to find evidence for a hot hand effect.
-* <a href="https://github.com/janoleko/LatentMarkov/blob/main/MMMPP_Application.R">`MMMPP_Application.R`</a>: Illustrating MMPPs by analysing the surfacing times of minke whales.
+* <a href="https://github.com/janoleko/LatentMarkov/blob/main/ctSSM_Application.R">`ctSSM_Application.R`</a>: Illustrating continuous-time SSMs by analyzing seven-meter throws in handball to find evidence for a hot hand effect.
+* <a href="https://github.com/janoleko/LatentMarkov/blob/main/MMMPP_Application.R">`MMMPP_Application.R`</a>: Illustrating MMPPs by analyzing the surfacing times of minke whales.
 
 Additionally, the file <a href="https://github.com/janoleko/LatentMarkov/blob/main/likelihood_functions.R">`likelihood_functions.R`</a> contains all negative log-likelihood functions used to fit the above models via direct numerical maximum likelihood estimation as explained in the paper. For each fitted model, we provide a base R version as well as a high performance version of the likelihood implemented in the R package <a href="https://github.com/janoleko/LaMa" target="_blank">`LaMa`</a>.
 
