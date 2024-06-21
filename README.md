@@ -15,3 +15,9 @@ measured for lung transplant recipients.
 Additionally, the file <a href="https://github.com/janoleko/LatentMarkov/blob/main/likelihood_functions.R">`likelihood_functions.R`</a> contains all negative log-likelihood functions used to fit the above models via direct numerical maximum likelihood estimation as explained in the paper. For each fitted model, we provide a base R version as well as a high performance version of the likelihood implemented in the R package <a href="https://github.com/janoleko/LaMa" target="_blank">`LaMa`</a>.
 
 The figures presented in the paper are provided in the folder `figs` and all data necessary will either be downloaded automatically by running the case study code, or is included in the folder `data` and will be loaded automatically.
+
+When using `LaMa`, please cite the package as follows:
+
+Koslik Jan-Ole (2024). LaMa: Fast Numerical Maximum Likelihood Estimation for Latent Markov Models. R package version 1.0.0 <https://CRAN.R-project.org/package=LaMa>.
+
+Or in R type `citation(package = "LaMa")`.
