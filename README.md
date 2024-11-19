@@ -18,6 +18,6 @@ The figures presented in the paper are provided in the folder `figs` and all dat
 
 When using `LaMa`, please cite the package as follows:
 
-Koslik Jan-Ole (2024). LaMa: Fast Numerical Maximum Likelihood Estimation for Latent Markov Models. R package version 1.0.0 <https://CRAN.R-project.org/package=LaMa>.
+Koslik Jan-Ole (2024). LaMa: Fast Numerical Maximum Likelihood Estimation for Latent Markov Models. R package version 2.0.1 <https://CRAN.R-project.org/package=LaMa>.
 
 Or in R type `citation(package = "LaMa")`.
