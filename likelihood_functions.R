@@ -164,39 +164,40 @@ mllk_HMM_fast = function(theta.star, X, N){
 ### long version
 mllk_ct_slow = function(theta.star, X){
   beta = matrix(theta.star[1:4], ncol = 2)
-  sigma = exp(theta.star[4+1:2])
+  sigma = exp(theta.star[4 + 1:2])
   # structured generator matrix
   Q = matrix(0, 3, 3)
-  Q[1,2:3] = exp(theta.star[6+1:2])
-  Q[2,3] = exp(theta.star[9])
+  Q[1, 2:3] = exp(theta.star[6 + 1:2])
+  Q[2, 3] = exp(theta.star[9])
   diag(Q) = -rowSums(Q)
-  delta = c(exp(theta.star[10:11]),0)
-  delta = delta/sum(delta)
+  delta = c(exp(theta.star[10:11]), 0)
+  delta = delta / sum(delta)
   # for the rest: loop over patients
   l = 0 # initialize log likelihood
   ptnums = unique(X$ptnum) # patient numbers
   for(i in ptnums){
-    X_p = X[which(X$ptnum==i),]
+    X_p = X[which(X$ptnum == i), ]
     n_p = nrow(X_p)
     timediff = diff(X_p$days)
-    Qube = array(dim = c(3,3,n_p-1))
-    for(t in 1:(n_p-1)){
-      Qube[,,t] = expm::expm(Q*timediff[t])
+    Qube = array(dim = c(3, 3, n_p - 1))
+    for(t in 1:(n_p - 1)){
+      Qube[, , t] = expm::expm(Q * timediff[t])
     }
     allprobs = matrix(1, nrow = n_p, ncol = 3)
     ind = which(!is.na(X_p$fev))
     for(j in 1:2){
-      allprobs[ind,j] = dnorm(X_p$fev[ind], beta[j,1]+beta[j,2]*X_p$acute[ind], sigma[j])
+      allprobs[ind, j] = dnorm(X_p$fev[ind], beta[j, 1] + beta[j, 2] * X_p$acute[ind], 
+                               sigma[j])
     }
-    allprobs[,3] = 0
-    allprobs[which(X_p$fev==999),] = c(0,0,1)
+    allprobs[, 3] = 0
+    allprobs[which(X_p$fev == 999), ] = c(0, 0, 1)
     # forward algorithm to calculate the log-likelihood recursively
-    foo = delta%*%diag(allprobs[1,])
-    phi = foo/sum(foo)
+    foo = delta %*% diag(allprobs[1, ])
+    phi = foo / sum(foo)
     l_p = log(sum(foo))
     for(t in 2:n_p){
-      foo = phi%*%Qube[,,t-1]%*%diag(allprobs[t,])
-      phi = foo/sum(foo)
+      foo = phi %*% Qube[, , t - 1] %*% diag(allprobs[t, ])
+      phi = foo / sum(foo)
       l_p = l_p + log(sum(foo))
     }
     l = l + l_p
@@ -207,29 +208,30 @@ mllk_ct_slow = function(theta.star, X){
 ### short version using the package LaMa
 mllk_ct_fast = function(theta.star, X){
   beta = matrix(theta.star[1:4], ncol = 2)
-  sigma = exp(theta.star[4+1:2])
+  sigma = exp(theta.star[4 + 1:2])
   # structured generator matrix
   Q = matrix(0, 3, 3)
-  Q[1,2:3] = exp(theta.star[6+1:2])
-  Q[2,3] = exp(theta.star[9])
+  Q[1, 2:3] = exp(theta.star[6 + 1:2])
+  Q[2, 3] = exp(theta.star[9])
   diag(Q) = -rowSums(Q)
-  delta = c(exp(theta.star[10:11]),1)
-  delta = delta/sum(delta)
+  delta = c(exp(theta.star[10:11]), 0)
+  delta = delta / sum(delta)
   # for the rest: loop over patients
   l = 0 # initialize log likelihood
   ptnums = unique(X$ptnum) # patient numbers
   for(i in ptnums){
-    X_p = X[which(X$ptnum==i),]
+    X_p = X[which(X$ptnum == i), ]
     n_p = nrow(X_p)
     timediff = diff(X_p$days)
-    Qube = LaMa::tpm_cont(Q, timediff) # exp(Q*dt)
+    Qube = LaMa::tpm_cont(Q, timediff) # exp(Q * dt)
     allprobs = matrix(1, nrow = n_p, ncol = 3)
     ind = which(!is.na(X_p$fev))
     for(j in 1:2){
-      allprobs[ind,j] = dnorm(X_p$fev[ind], beta[j,1]+beta[j,2]*X_p$acute[ind], sigma[j])
+      allprobs[ind, j] = dnorm(X_p$fev[ind], beta[j, 1] + beta[j, 2] * X_p$acute[ind], 
+                               sigma[j])
     }
-    allprobs[,3] = 0
-    allprobs[which(X_p$fev==999),] = c(0,0,1)
+    allprobs[, 3] = 0
+    allprobs[which(X_p$fev == 999), ] = c(0, 0, 1)
     # forward algorithm to calculate the log-likelihood recursively
     l = l + LaMa::forward_g(delta, Qube, allprobs)
   }
