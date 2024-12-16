@@ -12,6 +12,7 @@
 # N: number of states
 # bm: range of state values
 # m: number of intervals
+# deltat: length of time intervals between consecutive observations
 
 
 # install.packages("LaMa")
@@ -306,15 +307,15 @@ mllk_ctSSM_slow = function(theta.star, X, deltat, bm, m){
   # intercept of the state-dependent process
   beta = theta.star[3] # intercept
   # construction of intervals for numerical integration
-  b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
-  h = b[2]-b[1] # interval width
-  bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
+  b = seq(-bm, bm, length = m + 1) # intervals for midpoint quadrature
+  h = b[2] - b[1] # interval width
+  bstar = (b[-1] + b[-(m + 1)]) / 2 # interval midpoints
   # approximate transition densities with time-dependent variance
   Gamma = array(0, dim = c(m, m, length(deltat))) # transition probability matrices for unique time differences
   for (t in 1:length(deltat)) {
     Dt = deltat[t]
-    Gamma[,,t] = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar,
-                        sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
+    Gamma[, , t] = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar,
+                          sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
   }
   # initial distribution = stationary distribution of OU process
   delta = dnorm(bstar, 0, sqrt(sigma^2 / (2 * theta))) * h
@@ -326,14 +327,14 @@ mllk_ctSSM_slow = function(theta.star, X, deltat, bm, m){
   l = 0
   for(i in 1:length(uIDs)){
     ind = which(X$uID == uIDs[i])
-    Xi = X[ind,]
+    Xi = X[ind, ]
     
     # forward algorithm
-    foo = delta%*%diag(allprobs[1,])
+    foo = delta %*% diag(allprobs[1, ])
     li = log(sum(foo))
     phi = foo / sum(foo)
     for(t in 2:nrow(Xi)){
-      foo = phi %*% Gamma[,,Xi$match2Array[t]] %*% diag(allprobs[t,])
+      foo = phi %*% Gamma[, , Xi$match2Array[t]] %*% diag(allprobs[t, ])
       li = li + log(sum(foo))
       phi = foo / sum(foo)
     }
@@ -350,15 +351,15 @@ mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
   # intercept of the state-dependent process
   beta = theta.star[3] # intercept
   # construction of intervals for numerical integration
-  b = seq(-bm, bm, length = m+1) # intervals for midpoint quadrature
-  h = b[2]-b[1] # interval width
-  bstar = (b[-1] + b[-(m+1)])/2 # interval midpoints
+  b = seq(-bm, bm, length = m + 1) # intervals for midpoint quadrature
+  h = b[2] - b[1] # interval width
+  bstar = (b[-1] + b[-(m + 1)]) / 2 # interval midpoints
   # approximate transition densities with time-dependent variance
   Gamma = array(0, dim = c(m, m, length(deltat))) # transition probability matrices for unique time differences
   for (t in 1:length(deltat)) {
     Dt = deltat[t]
-    Gamma[,,t] = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar, 
-                        sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
+    Gamma[, , t] = sapply(bstar, dnorm, mean = exp(-theta * Dt) * bstar, 
+                          sd = sqrt((1 - exp(-2 * theta * Dt)) * sigma^2 / (2 * theta))) * h
   }
   # initial distribution = stationary distribution of OU process
   delta = dnorm(bstar, 0, sqrt(sigma^2 / (2 * theta))) * h 
@@ -366,7 +367,7 @@ mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
   allprobs = t(sapply(X$seven_meter_success, dbinom, size = 1, p = plogis(beta + bstar)))
   
   # forward algorithm to calculate the approximate log-likelihood recursively
-  -LaMa::forward_g(delta, Gamma[,,X$match2Array], allprobs, trackInds)
+  -LaMa::forward_g(delta, Gamma[, , X$match2Array], allprobs, trackInds)
 }
 
 
