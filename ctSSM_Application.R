@@ -120,10 +120,10 @@ qnorm(0.01, 0, sqrt(sigma^2 / (2 * theta))) # initial distribution = stationary 
 I = solve(modOU$hessian)
 se = sqrt(diag(I))
 
-(thetaCI = exp(modOU$estimate[1] + 1.96 * se[1]*c(-1,1)))
-(sigmaCI = exp(modOU$estimate[2] + 1.96 * se[2]*c(-1,1)))
-(betaCI = modOU$estimate[3] + 1.96 * se[3]*c(-1,1))
-(probCI = plogis(modOU$estimate[3] + 1.96 * se[3]*c(-1,1)))
+(thetaCI = exp(modOU$estimate[1] + 1.96 * se[1] * c(-1, 1)))
+(sigmaCI = exp(modOU$estimate[2] + 1.96 * se[2] * c(-1, 1)))
+(betaCI = modOU$estimate[3] + 1.96 * se[3] * c(-1, 1))
+(probCI = plogis(modOU$estimate[3] + 1.96 * se[3] * c(-1, 1)))
 
 # estimated parameters and confidence intervals
 round(theta, 3)
@@ -145,7 +145,7 @@ exp(-theta * 60) # 35% autocorrelation after 60 minutes (entire game)
 
 # sampling from fitted OU process
 
-dt = 1/60 # one second intervals
+dt = 1 / 60 # one second intervals
 n = 60 / dt
 
 color = c("orange", "deepskyblue", "seagreen2", "plum", "navy", "firebrick3")
@@ -154,12 +154,13 @@ pdf("./figs/simOU_process.pdf", width = 8, height = 5)
 
 set.seed(13)
 # one realization
-plot(NA, xlim = c(0, 60), ylim = c(-2.5, 2.5), xlab = "time (minutes)", ylab = "hotness", bty = "n")
+plot(NA, xlim = c(0, 60), ylim = c(-2.5, 2.5), xlab = "time (minutes)", 
+     ylab = "hotness", bty = "n")
 x = numeric(n)
 time = 1:n * dt
 x[1] = rnorm(1, 0, sqrt(sigma^2 / (2 * theta)))
 for(t in 2:n){
-  x[t] = rnorm(1, mean = exp(-theta * dt) * x[t-1], 
+  x[t] = rnorm(1, mean = exp(-theta * dt) * x[t - 1], 
                sd = sqrt((1 - exp(-2 * theta * dt)) * sigma^2 / (2 * theta)))
 }
 lines(time, x, type = "l", col = "black", lwd = 1)
@@ -168,10 +169,10 @@ lines(time, x, type = "l", col = "black", lwd = 1)
 k = 5
 for(i in 1:k){
   x = numeric(n)
-  time = 1:n *dt
+  time = 1:n * dt
   x[1] = rnorm(1, 0, sqrt(sigma^2 / (2 * theta)))
   for(t in 2:n){
-    x[t] = rnorm(1, mean = exp(-theta * dt) * x[t-1], 
+    x[t] = rnorm(1, mean = exp(-theta * dt) * x[t - 1], 
                  sd = sqrt((1 - exp(-2 * theta * dt)) * sigma^2 / (2 * theta)))
   }
   lines(time, x, type = "l", col = color[i], lwd = 1)
