@@ -92,9 +92,6 @@ for(i in 1:nrow(data)){
   }
 }
 
-# this vector defines where each single track starts and is necessary for LaMa when summing the individual log-likelihoods
-trackInds = calc_trackInd(as.character(data$uID))
-
 
 # Fitting the model -------------------------------------------------------
 

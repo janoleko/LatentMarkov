@@ -334,7 +334,7 @@ mllk_ctSSM_slow = function(theta.star, X, deltat, bm, m){
     li = log(sum(foo))
     phi = foo / sum(foo)
     for(t in 2:nrow(Xi)){
-      foo = phi %*% Gamma[, , Xi$match2Array[t]] %*% diag(allprobs[t, ])
+      foo = phi %*% Gamma[, , Xi$match2Array[t]] %*% diag(allprobs[ind[t], ])
       li = li + log(sum(foo))
       phi = foo / sum(foo)
     }
@@ -367,7 +367,7 @@ mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
   allprobs = t(sapply(X$seven_meter_success, dbinom, size = 1, p = plogis(beta + bstar)))
   
   # forward algorithm to calculate the approximate log-likelihood recursively
-  -LaMa::forward_g(delta, Gamma[, , X$match2Array], allprobs, trackInds)
+  -LaMa::forward_g(delta, Gamma[, , X$match2Array], allprobs, X$uID)
 }
 
 
