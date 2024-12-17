@@ -15,7 +15,7 @@ data = read.csv("./data/handball_data_7m.csv")
 
 # some data cleaning
 n = nrow(data)
-data = data[n:1,] # reverse the order of the data
+data = data[n:1, ] # reverse the order of the data
 
 unique_players = unique(data$player)
 data$player = as.factor(data$player)
@@ -48,7 +48,7 @@ players = unique(data$player)
 data = split(data, data$player)
 for(i in 1:length(players)){
   if(players[i] == "Uwe Gensheimer"){
-    data[[i]][1:2,] = data[[i]][2:1,] # throws by Uwe Gensheimer were in wrong order
+    data[[i]][1:2, ] = data[[i]][2:1, ] # throws by Uwe Gensheimer were in wrong order
   }
   data[[i]]$timediff = c(NA, diff(data[[i]]$time2))
   trackInds[[i]] = calc_trackInd(data[[i]]$uID)
@@ -56,7 +56,7 @@ for(i in 1:length(players)){
 }
 data = bind_rows(data)
 
-data$timediff = data$timediff/60 # timediff in minutes not seconds
+data$timediff = data$timediff / 60 # timediff in minutes not seconds
 
 # View(data)
 
@@ -68,7 +68,7 @@ data = bind_rows(data[which(lapply(data, nrow) > 2)])
 
 # finally filter out tracks for which time diffs are missing
 data = split(data, data$uID)
-data = bind_rows(data[which(unlist(lapply(data, function(X) sum(is.na(X[,12])) <= 1)))])
+data = bind_rows(data[which(unlist(lapply(data, function(X) sum(is.na(X[, 12])) <= 1)))])
 
 nrow(data) # 1131 total throws
 length(unique(data$player)) # by 46 players
@@ -82,7 +82,7 @@ source("likelihood_functions.R")
 
 # To avoid redundant calculations, we calculate the unique time differences and match them to the corresponding rows
 deltat = sort(unique(data$timediff))
-# we do this, as there are less unique time differences than overall transitions in the data set, this way saving compuation time.
+# we do this, as there are less unique time differences than overall transitions in the data set, this way saving computation time.
 
 # creating a column in the data set to match the unique time differences to the corresponding row
 data$match2Array = NA
