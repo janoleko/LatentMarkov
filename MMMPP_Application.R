@@ -19,7 +19,7 @@ pdf("./figs/mmpp_divetimes.pdf", width = 7, height = 4)
 par(mfrow = c(4,1), mar = c(4.1,2,0,2) + 0.1)
 for(i in 1:4){
   plot(surftimes[[i]], rep(1, length(surftimes[[i]])), ylim = c(0,1.5), type = "h", 
-       yaxt = "n", xaxt = "n", xlab = "Dive time in minutes", ylab = "", bty = "n", xlim = c(0, 3500))
+       yaxt = "n", xaxt = "n", xlab = "Dive time in seconds", ylab = "", bty = "n", xlim = c(0, 3500))
   axis(1, at = seq(0, 3500, 500), labels = seq(0, 3500, 500))
 }
 dev.off()
