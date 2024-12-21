@@ -12,7 +12,7 @@
 # N: number of states
 # bm: range of state values
 # m: number of intervals
-# deltat: length of time intervals between consecutive observations
+# deltat / timediff: length of time intervals between consecutive observations
 
 
 # install.packages("LaMa")
@@ -374,26 +374,26 @@ mllk_ctSSM_fast = function(theta.star, X, deltat, bm, m){
 # MMPP case study ---------------------------------------------------------
 
 ### longer version in base R
-mllk_mmpp_slow = function(theta.star, timediff, N=2){
+mllk_mmpp_slow = function(theta.star, timediff, N = 2){
   lambda = exp(theta.star[1:N]) # state specific rates
   Q = diag(N) # generator matrix
-  Q[!Q] = exp(theta.star[N+1:(N*(N-1))])
+  Q[!Q] = exp(theta.star[N + 1:(N * (N - 1))])
   diag(Q) = 0
   diag(Q) = -rowSums(Q)
-  delta = solve(t(Q+1), rep(1,N), tol = 1e-20)
-  # we split the Omega matrix into (Q-Lambda)*dt and Lambda
-  Qube = array(dim = c(N,N,length(timediff)))
+  delta = solve(t(Q + 1), rep(1, N))
+  # we split the Omega matrix into (Q - Lambda) * dt and Lambda
+  Qube = array(dim = c(N, N, length(timediff)))
   for(t in 1:length(timediff)){
-    Qube[,,t] = expm::expm((Q-diag(lambda))*timediff[t])
+    Qube[, , t] = expm::expm((Q - diag(lambda)) * timediff[t])
   }
-  allprobs = matrix(lambda, nrow = length(timediff)+1, ncol = N, byrow = T) # Lambda
-  allprobs[1,] = 1 # no Lambda matrix at the start of the likelihood
+  allprobs = matrix(lambda, nrow = length(timediff) + 1, ncol = N, byrow = T) # Lambda
+  allprobs[1, ] = 1 # no Lambda matrix at the start of the likelihood
   # forward algorithm in R
-  foo = delta%*%diag(allprobs[1,])
+  foo = delta %*% diag(allprobs[1, ])
   l = log(sum(foo))
   phi = foo / sum(foo)
   for(t in 1:length(timediff)){
-    foo = phi %*% Qube[,,t] %*% diag(allprobs[t+1,])
+    foo = phi %*% Qube[, , t] %*% diag(allprobs[t + 1,])
     l = l + log(sum(foo))
     phi = foo / sum(foo)
   }
@@ -401,19 +401,18 @@ mllk_mmpp_slow = function(theta.star, timediff, N=2){
 }
 
 ### short version using the package LaMa
-mllk_mmpp_fast = function(theta.star, timediff, N=2){
+mllk_mmpp_fast = function(theta.star, timediff, N = 2){
   lambda = exp(theta.star[1:N]) # state specific rates
   Q = diag(N) # generator matrix
-  Q[!Q] = exp(theta.star[N+1:(N*(N-1))])
+  Q[!Q] = exp(theta.star[N + 1:(N * (N - 1))])
   diag(Q) = 0
   diag(Q) = -rowSums(Q)
-  delta = solve(t(Q+1), rep(1,N)) # stationary initial distribution
+  delta = solve(t(Q + 1), rep(1, N)) # stationary initial distribution
   # we split the Omega matrix into (Q-Lambda)*dt and Lambda for efficiency
-  Qube = LaMa::tpm_cont(Q-diag(lambda), timediff) # (Q-Lambda)*dt
-  allprobs = matrix(lambda, nrow = length(timediff)+1, ncol = N, byrow = T) # Lambda
-  allprobs[1,] = 1 # no Lambda matrix at the start of the likelihood
+  Qube = LaMa::tpm_cont(Q - diag(lambda), timediff) # (Q - Lambda) * dt
+  allprobs = matrix(lambda, nrow = length(timediff) + 1, ncol = N, byrow = T) # Lambda
+  allprobs[1, ] = 1 # no Lambda matrix at the start of the likelihood
   # forward algorithm in C++ using LaMa
   -LaMa::forward_g(delta, Qube, allprobs)
 }
-
 
