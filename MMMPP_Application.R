@@ -19,7 +19,7 @@ pdf("./figs/mmpp_divetimes.pdf", width = 7, height = 4)
 par(mfrow = c(4, 1), mar = c(4.1, 2, 0, 2) + 0.1)
 for(i in 1:4){
   plot(surftimes[[i]], rep(1, length(surftimes[[i]])), ylim = c(0, 1.5), type = "h", 
-       yaxt = "n", xaxt = "n", xlab = "Dive time in minutes", ylab = "", 
+       yaxt = "n", xaxt = "n", xlab = "Dive time in seconds", ylab = "", 
        bty = "n", xlim = c(0, 3500))
   axis(1, at = seq(0, 3500, 500), labels = seq(0, 3500, 500))
 }
@@ -34,7 +34,7 @@ source("likelihood_functions.R")
 # Model fitting -----------------------------------------------------------
 
 lambda0 = 1 / c(quantile(unlist(surftimes), 0.2), quantile(unlist(surftimes), 0.8))
-qs0 = rep(mean(lambda0) / 5, 2)
+qs0 = rep(1 / 90, 2)
 
 # initial values
 theta.star = log(c(lambda0, qs0))
