@@ -407,7 +407,7 @@ mllk_mmpp_fast = function(theta.star, timediff, N=2){
   Q[!Q] = exp(theta.star[N+1:(N*(N-1))])
   diag(Q) = 0
   diag(Q) = -rowSums(Q)
-  delta = solve(t(Q+1), rep(1,N), tol = 1e-20) # stationary initial distribution
+  delta = solve(t(Q+1), rep(1,N)) # stationary initial distribution
   # we split the Omega matrix into (Q-Lambda)*dt and Lambda for efficiency
   Qube = LaMa::tpm_cont(Q-diag(lambda), timediff) # (Q-Lambda)*dt
   allprobs = matrix(lambda, nrow = length(timediff)+1, ncol = N, byrow = T) # Lambda
